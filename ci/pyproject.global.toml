@@ -1,0 +1,103 @@
+exclude = [
+  "__pycache__",
+  ".git"
+]
+lint.ignore = [
+  "E203",  # forbid spaces before punctuation (ignore for formatting purposes)
+  "EM101",  # force remove string literal from Exception to variable
+  "EM102",  # Exception must not use an f-string literal, assign to variable first
+  "FBT001",  # forbid boolean in function signature
+  "FBT002",  # forbid boolean values in function signature as default value
+  "G004",  # f-string in logging
+  "N805",  # tool.ruff.pep8-naming.classmethod-decorators doesn't works
+  "N812",  # from example import myclassname as MyClassName
+  "PYI024",  # force replacement collection.namedtuple with typing.NamedTuple (what?!)
+  "RET502",  # force return None instead just return
+  "RET503",  # force return None instead nothing
+  "RET505",  # force remove elif after raise in previous if
+  "PLR2044",  # single comment mark, for separate code blocks
+  "TRY003"  # Avoid specifying long messages outside the exception class
+]
+lint.select = [
+  "A",
+  "B",
+  "C",
+  "E",
+  "F",
+  "G",
+  "I",
+  "N",
+  "Q",
+  "S",
+  "T",
+  "W",
+  "C4",
+  "DJ",
+  "EM",
+  "FA",
+  "PD",
+  "PL",
+  "PT",
+  "TC",
+  "UP",
+  "AIR",
+  "ARG",
+  "BLE",
+  "C90",
+  "COM",
+  "DTZ",
+  "ERA",
+  "EXE",
+  "FBT",
+  "FIX",
+  "FLY",
+  "ICN",
+  "INP",
+  "INT",
+  "ISC",
+  "LOG",
+  "NPY",
+  "PGH",
+  "PIE",
+  "PTH",
+  "PYI",
+  "RET",
+  "RSE",
+  "RUF",
+  "SIM",
+  "SLF",
+  "T10",
+  "T20",
+  "TCH",
+  "TID",
+  "TRY",
+  "YTT",
+  "FAST",
+  "FURB",
+  # "PERF",
+  "SLOT",
+  "ASYNC"
+]
+lint.unfixable = [
+  "G004",  # f-string in logging
+  "ERA",  # do not autoremove commented out code
+  "RUF012"  # loop: linter want this, but after use NOQA mark - fixer remove mark
+]
+
+[lint.flake8-annotations]
+suppress-dummy-args = true
+
+[lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+multiline-quotes = "double"
+
+[lint.mccabe]
+max-complexity = 20
+
+[lint.pep8-naming]
+classmethod-decorators = [
+  "Property.Class",
+  "Property.Class.Cached",
+  "Property.Class.Parent"
+]

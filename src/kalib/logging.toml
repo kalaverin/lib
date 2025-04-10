@@ -1,0 +1,25 @@
+version = 1
+
+[formatters.default]
+format = "{asctime} {levelname} {name}: {message}"
+style = "{"
+
+[formatters.precise]
+format = "{asctime} {levelname} {name}:{funcName}:{lineno}: {message}"
+style = "{"
+
+[handlers.stdout]
+class = "logging.StreamHandler"
+formatter = "precise"
+level = "DEBUG"
+stream = "ext://sys.stdout"
+
+[loggers.kalib]
+handlers = ["stdout"]
+level = "DEPR"
+propagate = false
+
+[loggers.root]
+handlers = ["stdout"]
+level = "INFO"
+propagate = false

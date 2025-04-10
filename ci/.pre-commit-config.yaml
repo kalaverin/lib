@@ -1,0 +1,132 @@
+---
+ci:
+  autofix_prs: false
+  autoupdate_commit_msg: pre-commit autoupdate
+  autoupdate_schedule: monthly
+
+default_language_version:
+  python: python3.10
+
+fail_fast: false
+
+repos:
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.22
+    hooks:
+      - id: mdformat
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: forbid-submodules
+      - id: check-executables-have-shebangs
+      - id: check-symlinks
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-vcs-permalinks
+      - id: check-builtin-literals
+      - id: debug-statements
+      - id: detect-private-key
+      - id: mixed-line-ending
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: pretty-format-json
+      - id: requirements-txt-fixer
+      - id: double-quote-string-fixer
+      - id: name-tests-test
+        exclude: tests/(mocks|syspath).py
+  - repo: https://github.com/sirosen/texthooks
+    rev: 0.6.8
+    hooks:
+      - id: fix-spaces
+      - id: fix-ligatures
+      - id: forbid-bidi-controls
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.14.0
+    hooks:
+      - id: pretty-format-ini
+        args:
+          - --autofix
+      - id: pretty-format-toml
+        args:
+          - --autofix
+  - repo: https://github.com/lyz-code/yamlfix
+    rev: 1.17.0
+    hooks:
+      - id: yamlfix
+  - repo: https://github.com/dannysepler/rm_unneeded_f_str
+    rev: v0.2.0
+    hooks:
+      - id: rm-unneeded-f-str
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-type-ignore
+      - id: python-check-mock-methods
+      - id: python-no-eval
+      - id: python-no-log-warn
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: remove-crlf
+      - id: remove-tabs
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.19.1
+    hooks:
+      - id: pyupgrade
+        args:
+          - --py310-plus
+  - repo: https://github.com/MarcoGorelli/absolufy-imports
+    rev: v0.3.1
+    hooks:
+      - id: absolufy-imports
+  - repo: https://github.com/MarcoGorelli/auto-walrus
+    rev: 0.3.4
+    hooks:
+      - id: auto-walrus
+        args:
+          - --line-length
+          - '89'
+  - repo: https://github.com/sirwart/ripsecrets
+    rev: v0.1.9
+    hooks:
+      - id: ripsecrets-system
+  - repo: https://github.com/radix-ai/auto-smart-commit
+    rev: v1.0.3
+    hooks:
+      - id: auto-smart-commit
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-use-type-annotations
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.5
+    hooks:
+      - id: ruff
+        args:
+          - --config=pyproject.toml
+  - repo: https://github.com/dosisod/refurb
+    rev: v2.0.0
+    hooks:
+      - id: refurb
+  - repo: https://github.com/kalaverin/radon
+    rev: 0.2.1
+    hooks:
+      - id: radon
+        args:
+          - --error-time=2100
+          - --error-effort=36100
+          - --error-volume=3100
+          - --error-difficulty=12
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.6.14
+    hooks:
+      - id: uv-lock
+        args:
+          - --locked
