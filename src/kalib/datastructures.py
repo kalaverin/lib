@@ -175,8 +175,8 @@ def to_json(func, data, /, **kw):
         kw.setdefault('sort_keys', True)
 
     kw.setdefault('default', default_serializer)
-    result = func(data, **kw)
     binary = kw.pop('bytes', False)
+    result = func(data, **kw)
 
     encode = (to_ascii, to_bytes)[binary]
     with suppress(UnicodeEncodeError, UnicodeDecodeError):
