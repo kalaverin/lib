@@ -49,7 +49,7 @@ lint.select = [
   "ERA",
   "EXE",
   "FBT",
-  "FIX",
+  # "FIX",
   "FLY",
   "ICN",
   "INP",

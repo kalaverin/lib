@@ -535,7 +535,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
             if isinstance(field.type, bool):
                 objecttype = bool
 
-            # print(objecttype)
             with suppress(TypeError):
                 if Is.Class(objecttype) and isinstance(value, objecttype):
                     continue
