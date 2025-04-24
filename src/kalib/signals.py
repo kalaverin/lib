@@ -49,7 +49,7 @@ def quit_at(*, func=sys.exit, signal=None, errno=137, **kw):
             return False
 
         elif initial_stamp != (ctime := get_mtime()):
-            file = get_selfpath()
+            file = str(get_selfpath())
             Logger.warning(
                 f'{file=} updated {time.time() - ctime:.2f} seconds ago, quit..')
             func(errno)
