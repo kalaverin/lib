@@ -156,6 +156,10 @@ def class_of(obj):
     return obj if isclass(obj) else type(obj)
 
 
+def subclass(obj, types):
+    return issubclass(class_of(obj), types)
+
+
 def issubstance(obj, types):  # noqa: PLR0911, PLR0912
     if types is None:
         return False
@@ -459,7 +463,7 @@ def sourcefile(obj, **kw):
     kw.setdefault('exclude_self', False)
     kw.setdefault('exclude_stdlib', False)
 
-    for i in iter_inheritance(obj, **kw):
+    for i in iter_inheritance(class_of(obj), **kw):
         with suppress(TypeError):
             return getsourcefile(i)
 
@@ -574,8 +578,8 @@ def get_subclasses_from_path(cls, path):
                 continue
 
             with suppress(Exception):
-                if (subclass := getattr(module, name)) and issubclass(subclass, cls):
-                    result.append(subclass)
+                if (sub := getattr(module, name)) and issubclass(sub, cls):
+                    result.append(sub)
 
         return tuple(result)
 
@@ -598,8 +602,8 @@ Is = (
     namedtuple(
         'Is', 'Class awaitable builtin callable classOf collection coroutine '
         'Builtin Primivite function imported internal '
-        'iterable mapping method module primitive')(
+        'iterable mapping method module primitive subclass')(
     is_class, is_awaitable, is_builtin, is_callable, class_of, is_collection,
     is_coroutine, is_from_builtin, is_from_primivite, is_function,
     is_imported_module, is_internal, is_iterable, is_mapping, is_method,
-    is_module, is_primitive))
+    is_module, is_primitive, subclass))
