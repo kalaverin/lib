@@ -8,9 +8,9 @@ ignore_missing_imports = true
 [ruff]
 extend = "lint/ruff.toml"
 
+[setuptools.package-dir]
+"" = "src"
+
 [uv]
 index-strategy = "unsafe-best-match"
 package = true
-
-[setuptools.package-dir]
-"" = "src"
