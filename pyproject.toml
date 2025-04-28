@@ -96,6 +96,9 @@ known-third-party = [
 [tool.setuptools]
 packages = []
 
+[tool.setuptools.package-dir]
+"" = "src"
+
 [tool.uv]
 default-groups = [
   "dev",
