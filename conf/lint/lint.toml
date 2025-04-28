@@ -86,10 +86,30 @@ unfixable = [
 [flake8-annotations]
 suppress-dummy-args = true
 
+[flake8-pytest-style]
+fixture-parentheses = false
+parametrize-names-type = "csv"
+parametrize-values-type = "tuple"
+
 [flake8-quotes]
 docstring-quotes = "double"
 inline-quotes = "single"
 multiline-quotes = "double"
+
+[isort]
+known-first-party = ["myexlab"]
+relative-imports-order = "closest-to-furthest"
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "first-party",
+  "local-project",
+  "local-folder"
+]
+
+[isort.sections]
+"local-project" = ["app", "tests"]
 
 [mccabe]
 max-complexity = 20
