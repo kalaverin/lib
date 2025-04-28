@@ -91,11 +91,6 @@ docstring-quotes = "double"
 inline-quotes = "single"
 multiline-quotes = "double"
 
-[isort]
-known-first-party = [
-  "kalib"
-]
-
 [mccabe]
 max-complexity = 20
 

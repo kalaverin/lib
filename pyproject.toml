@@ -10,8 +10,6 @@ build = [
 ]
 dev = [
   "pytest>=8.3.5",
-  "ruff>=0.11.7",
-  "uv>=0.1",
   "tomli>=2.2.1",
   "tomli_w>=1.2.0",
   "uv-publish>=1.2.0"
@@ -80,22 +78,18 @@ all = [
   "zstd>=1.5.6.7"
 ]
 
-[setuptools.package-dir]
-"" = "src"
-
 [tool]
 extend = "conf/tool.toml"
 
-[tool.refurb]
-ignore = [
-  149,
-  176
+[tool.ruff.lint.isort]
+known-first-party = [
+  "kalib",
+]
+known-third-party = [
 ]
 
 [tool.setuptools]
-packages = [
-  "kalib"
-]
+packages = ["kalib"]
 
 [tool.uv]
 default-groups = [
