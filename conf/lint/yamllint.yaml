@@ -42,5 +42,7 @@ rules:
 ignore: |-
   .helm/templates/
   helm/templates/
+  .venv/
   venv/
+  .env/
   env/
