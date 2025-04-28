@@ -1,5 +1,8 @@
 ---
-yaml-files: ['*.yaml', '*.yml']
+yaml-files:
+  - '*.yaml'
+  - '*.yml'
+
 rules:
   braces:
     min-spaces-inside: 0
@@ -38,7 +41,14 @@ rules:
   trailing-spaces: enable
   truthy:
     level: warning
-    allowed-values: ['true', 'false', 'yes', 'no', 'True', 'False']
+    allowed-values:
+      - 'true'
+      - 'false'
+      - 'yes'
+      - 'no'
+      - 'True'
+      - 'False'
+
 ignore: |-
   .helm/templates/
   helm/templates/

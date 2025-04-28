@@ -7,6 +7,7 @@ Requires: venv, update
 Runs all defined pre-commit hooks.
 
 ```bash
+    uvx yamlfix .
     uvx pre-commit run --config conf/pre-commit.yaml --color always --all
 ```
 
