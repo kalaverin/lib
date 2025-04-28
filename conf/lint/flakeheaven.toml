@@ -1,0 +1,95 @@
+[tool.flakeheaven]
+docstring-convention = "google"
+exclude = ["*.rst"]
+format = "grouped"
+max_line_length = 89
+show_source = true
+
+[tool.flakeheaven.exceptions."tests/"]
+flake8-annotations = [
+  "-ANN001",
+  "-ANN401"  # Dynamically typed expressions (typing.Any) are disallowed
+]
+flake8-docstrings = [
+  "-D205",  # 1 blank line required between summary line and description
+  "-D212",  # Multi-line docstring summary should start at the first line
+  "-D400",  # First line should end with a period
+  "-D415"  # First line should end with a period, question mark, or exclamation point
+]
+pylint = [
+  "-R0201",  # Method could be a function. Raised because the methods of a test class
+  # don't use the self object, which is not wrong.
+  "-W0613",  # Unused argument in function, but in tests there are fixtures that even
+  # though they are not used in the function directly, they are used to
+  # configure the test.
+  "-R0904",  # Too many public methods (25/20) (too-many-public-methods)
+  "-C0302"  # Allows module to have unlimited number of lines.
+]
+
+[tool.flakeheaven.plugins]
+# flake8-variables-names = ['VNE001']
+dlint = ["+*", '-DUO102', '-DUO130', '-DUO103']
+flake8-aaa = ["+*", '-AAA01', '-AAA03', '-AAA04']
+# flake8-annotations = ["+*"]
+# flake8-annotations-complexity = ["+*"]
+flake8-bugbear = ["+*"]
+flake8-comprehensions = ["+*"]
+flake8-debugger = ["+*"]
+# flake8-docstrings = ["+*"]
+flake8-eradicate = ["+*", '-E800']
+flake8-expression-complexity = ["+*", '-ECE001']
+flake8-fixme = ["+*", '-T101']
+flake8-mutable = ["+*"]
+flake8-pytest = ["+*"]
+flake8-pytest-style = ["+*"]
+flake8-simplify = ["+*"]
+flake8-typing-imports = [
+  "+*",
+  "-TYP001",  # guard import by `if False:  # TYPE_CHECKING`: TYPE_CHECKING (not in
+  # 3.5.0, 3.5.1). We don't support Python < 3.7
+  "-TYP002"  # @overload is broken in <3.5.2, but we don't support Python 3.5
+]
+flake8-use-fstring = [
+  "+*",
+  '-FS002',  # force use f-string instead .format
+  '-FS003'  # f-string missing prefix
+]
+mccabe = ["+*"]
+pep8-naming = ["+*", '-N805']
+pycodestyle = [
+  "+*",
+  "-W503",  # No longer applies, incompatible with newer version of PEP8
+  # see https://github.com/PyCQA/pycodestyle/issues/197
+  # and https://github.com/psf/black/issues/113
+  "-E704",  # Black collapses implementations of classes/functions consisting solely of ...
+  # See https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#e701-e704
+  "-E302",
+  '-E265',
+  '-E122',  # continuation line missing indentation or outdented
+  '-E124',  # closing bracket does not match visual indentation
+  '-E128',  # continuation line under-indented for visual indent
+  '-E203',  # whitespace before ':'
+  '-E221',  # multiple spaces before operator
+  '-E225',  # missing whitespace around operator (i -1)
+  '-E251',  # unexpected spaces around keyword / parameter equals
+  '-E501',  # line too long (101 > 89 characters)
+  '-W504'  # line break after binary operator
+]
+pyflakes = [
+  "+*",
+  '-F401',
+  "-F841",  # Unused variable, already covered by W0612 of pylint
+  "-F821"  # Undefined variable, already covered by E0602 of pylint
+]
+pylint = [
+  "+*",
+  "-C0411",  # %s should be placed before %s,
+  # see https://github.com/PyCQA/pylint/issues/2175 and https://github.com/PyCQA/pylint/issues/1797
+  "-R0903",  # Too few methods warning, but if you define an interface with just one
+  # method that's fine
+  "-W1203",  # Use %s formatting in logging functions. Deprecated rule in favor of
+  # f-strings.
+  "-W1201",  # Use lazy % formatting in logging functions. Deprecated rule in favor of
+  # f-strings.
+  "-C0301"  # Lines too long. Already covered by E501.
+]

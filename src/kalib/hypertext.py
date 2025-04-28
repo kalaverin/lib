@@ -28,7 +28,6 @@ def build_enumerate(name, *order):
 
     types = tuple(set(map(type, order)))
 
-
     if len(types) != 1:
         msg = f"isn't implemented mixed attributes order: {types!r}"
         raise ValueError(msg)
@@ -487,7 +486,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
             parent = make_parent_class(offset)
             if offset not in result:
                 result[offset] = parent
-                classes[bool(offset >= 3)].append(parent)  # noqa: PLR2004
+                classes[offset >= 3].append(parent)  # noqa: PLR2004
                 setattr(HTTP, section, parent)
 
             root = HTTP if offset in (2, 3) else parent
@@ -687,7 +686,6 @@ class Cookies:
         self = cls.from_dump(data)
         self.log.verbose(f'{key=} got {self.as_json}', once=True)
         return self
-
 
     @classmethod
     def from_file(cls, path):
@@ -912,12 +910,14 @@ class URL(dataclass):
 
 # make all exceptions for easy imports at start time
 
+
 for exception in HTTPException.exceptions.values():
     locals()[exception.__name__] = exception
 
 @serializer(HTTPException)
 def from_http(something):
     return something.state.value
+
 
 HTTP.URL = URL
 HTTP.Agent = Agent

@@ -61,7 +61,7 @@ def parent_call(func):
         try:
             desc = get_attr(
                 class_of(node), func.__name__, exclude_self=True,
-                index=bool(func.__name__ not in class_of(node).__dict__))
+                index=func.__name__ not in class_of(node).__dict__)
             return func(node, call_descriptor(desc)(node, *args, **kw), *args, **kw)
 
         except RecursionError as e:
@@ -73,13 +73,16 @@ def parent_call(func):
     return parent_caller
 
 
-class PropertyError(Exception): ...
+class PropertyError(Exception):
+    ...
 
 
-class ContextFaultError(PropertyError): ...
+class ContextFaultError(PropertyError):
+    ...
 
 
-class AttributeException(PropertyError): ...  # noqa: N818
+class AttributeException(PropertyError):  # noqa: N818
+    ...
 
 
 def invokation_context_check(func):

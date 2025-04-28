@@ -41,6 +41,7 @@ def quit_at(*, func=sys.exit, signal=None, errno=137, **kw):
         bind(signal, handler)
 
     initial_stamp = get_mtime()
+
     def on_change(*, sleep=0.0):
 
         if NeedRestart and signal:

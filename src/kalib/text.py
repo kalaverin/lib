@@ -95,7 +95,6 @@ class Str:
         self._object = something
         self._encoding = encoding or self.INTERNAL_CHARSET
 
-
     @Property.Cached
     def representation(self):
         return self.uncast(self._object)
@@ -219,7 +218,7 @@ class Str:
         charset = (f'{self.charset} '.upper()) if self.charset else ''
 
         if isinstance(string, str) and len(self.bytes) != len(self.string):
-            length =f'={len(self.string):d}'
+            length = f'={len(self.string):d}'
 
         return (
             f'<{charset}{Who(self, full=False)}'

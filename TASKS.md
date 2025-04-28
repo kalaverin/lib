@@ -7,7 +7,7 @@ Requires: venv, update
 Runs all defined pre-commit hooks.
 
 ```bash
-    uvx pre-commit run --config ci/.pre-commit-config.yaml --color always --all
+    uvx pre-commit run --config conf/pre-commit.yaml --color always --all
 ```
 
 ## force-update
@@ -18,13 +18,13 @@ Requires: venv
 Update all pre-commit hook versions to latest releases.
 
 ```bash
-    uvx pre-commit autoupdate --config ci/.pre-commit-config.yaml --color always
+    uvx pre-commit autoupdate --config conf/pre-commit.yaml --color always
 
     uncommited="$(git diff --cached --name-only | sort -u | tr '\n' ' ' | xargs)"
     changes="$(git ls-files --deleted --modified --exclude-standard)"
     changes="$(printf "$changes" | sort -u | tr '\n' ' ' | xargs)"
 
-    if [[ "$uncommited" =~ "\bci/\.pre-commit-config\.yaml\b" ]] || [[ "$changes" =~ "\bci/\.pre-commit-config\.yaml\b" ]]; then
+    if [[ "$uncommited" =~ "\bconf/\pre-commit\.yaml\b" ]] || [[ "$changes" =~ "\bconf/\pre-commit\.yaml\b" ]]; then
         $XC add-precommit
     fi
 ```
@@ -64,13 +64,19 @@ Clean up the project working directory: remove build/, .venv/, and .ruff_cache/ 
     rm -rf build/          2>/dev/null || true
     rm -rf src/*.egg-info/ 2>/dev/null || true
 
-    rm -rf .mypy_cache/    2>/dev/null || true
-    rm -rf .ruff_cache/    2>/dev/null || true
-    rm -rf .pytest_cache/  2>/dev/null || true
-    rm -rf ci/.ruff_cache/ 2>/dev/null || true
+    #
 
-    find . -name "*.pyc" -delete || true
-    find . -name "__pycache__" -type d -exec rm -rf {} + || true
+    rm -rf .mypy_cache/ 2>/dev/null || true
+    rm -rf .pytest_cache/ 2>/dev/null || true
+    rm -rf .flakeheaven_cache/ 2>/dev/null || true
+
+    #
+
+    find .    -type f -delete -name "*.pyc"  || true
+    find log/ -type f -delete -name "*.log*" || true
+
+    find .    -type d -delete -name "__pycache__" || true
+    find .    -type d -delete -name ".ruff_cache" || true
 
     $XC local-clean || true
 ```
@@ -101,7 +107,7 @@ Make virtualenv for project build & test tools, install pre-push hook.
         uv venv
         uv sync --all-extras
         uvx pre-commit install \
-            --config ci/.pre-commit-config.yaml \
+            --config conf/pre-commit.yaml \
             --color always \
             --hook-type pre-push \
             --install-hooks \
@@ -121,7 +127,7 @@ Autoupdate pre-commit hooks if the last update was more than 7 days ago.
 ```bash
 
     ctime="$(date +%s)"
-    mtime="$(git log -1 --format=%ct ci/.pre-commit-config.yaml)"
+    mtime="$(git log -1 --format=%ct conf/pre-commit.yaml)"
 
     result=$(((7*86400) - (ctime - mtime)))
 
@@ -271,11 +277,11 @@ After validating the readiness for an update, it prompts to proceed. Once confir
 
 Requires: venv
 
-Check and format ci/.pre-commit-config.yaml. If any changes are made, it stages the file for the next commit.
+Check and format conf/pre-commit.yaml. If any changes are made, it stages the file for the next commit.
 
 ```bash
 
-    file="ci/.pre-commit-config.yaml"
+    file="conf/pre-commit.yaml"
 
     uvx pre-commit run check-yaml --config "$file" --color always --file "$file" || value="$?"
 
@@ -299,9 +305,9 @@ Check and format ci/.pre-commit-config.yaml. If any changes are made, it stages 
     changes="$(git ls-files --deleted --modified --exclude-standard)"
     changes="$(printf "$changes" | sort -u | tr '\n' ' ' | xargs)"
 
-    if [[ "$uncommited" =~ "\bci/\.pre-commit-config\.yaml\b" ]] || [[ "$changes" =~ "\bci/\.pre-commit-config\.yaml\b" ]]; then
+    if [[ "$uncommited" =~ "\bconf/\pre-commit\.yaml\b" ]] || [[ "$changes" =~ "\bconf/\pre-commit\.yaml\b" ]]; then
         git add "$file"
-        git commit -m "(ci/cd): autoupdate pre-commit"
+        git commit -m "(lint): autoupdate pre-commit"
     fi
 ```
 
@@ -315,11 +321,11 @@ Check and format pyproject.toml. If any changes are made, it stages the file for
 
     file="pyproject.toml"
 
-    uvx pre-commit run check-toml --config ci/.pre-commit-config.yaml --color always --file "$file" || value="$?"
+    uvx pre-commit run check-toml --config conf/pre-commit.yaml --color always --file "$file" || value="$?"
 
     while true; do
         value="0"
-        uvx pre-commit run pretty-format-toml --config ci/.pre-commit-config.yaml --color always --file "$file" || value="$?"
+        uvx pre-commit run pretty-format-toml --config conf/pre-commit.yaml --color always --file "$file" || value="$?"
 
         if [ "$value" -eq 0 ]; then
             break
@@ -357,7 +363,7 @@ Check and format uv.lock. If any changes are made, it stages the file for the ne
 
     if [[ "$uncommited" =~ "\buv.lock\b" ]] || [[ "$changes" =~ "\buv.lock\b" ]]; then
         git add "$file"
-        git commit -m "(ci/cd): lock dependencies"
+        git commit -m "(dep): lock dependencies"
     fi
 ```
 

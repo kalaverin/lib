@@ -53,11 +53,9 @@ def is_mapping(obj):
     if issubclass(cls, dict):
         return True
 
-    for key in ('__getitem__', '__setitem__', '__delitem__'):
-        if not hasattr(obj, key):
-            return False
-
-    return True
+    return all(map(
+        partial(hasattr, obj),
+        ('__getitem__', '__setitem__', '__delitem__')))
 
 
 def is_iterable(obj):
@@ -383,7 +381,7 @@ def objectname(obj, full=True):
     return name if full else name.rsplit('.', 1)[-1]
 
 
-def Who(obj, /, full=True, addr=False): # noqa: N802
+def Who(obj, /, full=True, addr=False):  # noqa: N802
     """
     Retrieve the name of an object, optionally including its memory address.
     Parameters:
@@ -418,7 +416,7 @@ def Who(obj, /, full=True, addr=False): # noqa: N802
     return name
 
 
-def Is(obj, /, **kw): # noqa: N802
+def Is(obj, /, **kw):  # noqa: N802
     """
     Generate a string representation of an object with optional keyword arguments.
     Parameters:

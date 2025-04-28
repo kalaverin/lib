@@ -77,7 +77,6 @@ except ImportError:
     EncoderException = ValueError
 
 
-
 class SerializeError(Exception):
     ...
 

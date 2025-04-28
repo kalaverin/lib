@@ -1,6 +1,5 @@
 import logging as syslog
 import traceback
-import typing
 from argparse import Namespace
 from asyncio import ensure_future, iscoroutinefunction
 from collections import OrderedDict, defaultdict
@@ -153,8 +152,8 @@ class NumericOrSetter:
     __add__ = __radd__
 
     def __call__(self, value):
-        setattr(self.instance, self.attribute,
-            getattr(self.instance, self.attribute) + value)
+        value = getattr(self.instance, self.attribute) + value
+        setattr(self.instance, self.attribute, value)
         return self.instance
 
     def __repr__(self):
@@ -345,7 +344,6 @@ class Logger(BaseLogger):
         self._shift += shift
         return self
 
-
     @extract_options_from_kwargs(
         shift   = 0,
         stack   = 0,
@@ -386,7 +384,7 @@ class Logger(BaseLogger):
             if not already:
                 cache[key] = int(time())
                 if len(cache) >= DEDUP_ORDER_SIZE:
-                    for _ in range( min(1, DEDUP_ORDER_SIZE - len(cache) + 10  ) ):
+                    for _ in range(min(1, DEDUP_ORDER_SIZE - len(cache) + 10)):
                         cache.popitem(last=False)
 
             elif var.once:
@@ -412,8 +410,8 @@ class Logger(BaseLogger):
             lines = lines[-var.count:]
 
         msg = '{0}\n{1}\n{2}: {0}'.format(
-                msg, ''.join(lines).rstrip(),
-                self.levels.get(level, f'UnknownLevel{level:d}'))
+            msg, ''.join(lines).rstrip(),
+            self.levels.get(level, f'UnknownLevel{level:d}'))
         method(level, msg, *args, **kw)
         return msg
 
@@ -473,9 +471,9 @@ class Logging:
 
         return Mixin
 
-    loggers          : typing.ClassVar[dict] = {}
-    path_nodes       : typing.ClassVar[list] = []
-    configured_files : typing.ClassVar[list] = []
+    loggers          : ClassVar[dict] = {}
+    path_nodes       : ClassVar[list] = []
+    configured_files : ClassVar[list] = []
 
     LOGGING_LEVEL    = INFO
     LOGGING_PRECISE  = 3
@@ -771,7 +769,6 @@ class Logging:
         ):
             return str(path)
         return getenv('LOGGING_CONFIG', None)
-
 
     @Property.Class.Cached
     def directories_from_callstack(cls):

@@ -51,7 +51,7 @@ def get_yaml_loader():
 def is_tty():
     """Return True if all standard streams are tty."""
 
-    if not getattr(sys, 'frozen', False): # nuitka compiler checks this
+    if not getattr(sys, 'frozen', False):  # nuitka compiler checks this
         return all(map(methodcaller('isatty'), (stderr, stdin, stdout)))
 
 
@@ -120,7 +120,6 @@ def lazy_proxy_to(  # noqa: PLR0915
 
     else:
         bind, mapping = mapping[-1], mapping[:-1]
-
 
     def binder(cls):  # noqa: PLR0915
 

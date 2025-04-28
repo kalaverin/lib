@@ -3,12 +3,9 @@ ci:
   autofix_prs: false
   autoupdate_commit_msg: pre-commit autoupdate
   autoupdate_schedule: monthly
-
 default_language_version:
   python: python3.10
-
 fail_fast: false
-
 repos:
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.22
@@ -49,15 +46,14 @@ repos:
     rev: v2.14.0
     hooks:
       - id: pretty-format-ini
-        args:
-          - --autofix
+        args: [--autofix]
       - id: pretty-format-toml
-        args:
-          - --autofix
-  - repo: https://github.com/lyz-code/yamlfix
-    rev: 1.17.0
+        args: [--autofix]
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.37.0
     hooks:
-      - id: yamlfix
+      - id: yamllint
+        args: [--config-file, conf/lint/yamllint.yaml]
   - repo: https://github.com/dannysepler/rm_unneeded_f_str
     rev: v0.2.0
     hooks:
@@ -78,8 +74,7 @@ repos:
     rev: v3.19.1
     hooks:
       - id: pyupgrade
-        args:
-          - --py310-plus
+        args: [--py310-plus]
   - repo: https://github.com/MarcoGorelli/absolufy-imports
     rev: v0.3.1
     hooks:
@@ -88,9 +83,7 @@ repos:
     rev: 0.3.4
     hooks:
       - id: auto-walrus
-        args:
-          - --line-length
-          - '89'
+        args: [--line-length, '89']
   - repo: https://github.com/sirwart/ripsecrets
     rev: v0.1.9
     hooks:
@@ -106,11 +99,35 @@ repos:
       - id: python-check-blanket-noqa
       - id: python-check-blanket-type-ignore
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.6
+    rev: v0.11.7
     hooks:
       - id: ruff
-        args:
-          - --config=pyproject.toml
+        args: [--config=pyproject.toml]
+  - repo: https://github.com/flakeheaven/flakeheaven.git
+    rev: 3.3.0
+    hooks:
+      - id: flakeheaven
+        args: [--config, conf/lint/flakeheaven.toml]
+        additional_dependencies:
+          - flake8-aaa
+          - flake8-annotations
+          - flake8-annotations-complexity
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-debugger
+          - flake8-docstrings
+          - flake8-eradicate
+          - flake8-expression-complexity
+          - flake8-fixme
+          - flake8-mutable
+          - flake8-pytest
+          - flake8-pytest-style
+          - flake8-simplify
+          - flake8-use-fstring
+          - flake8-typing-imports
+          - flake8-variables-names
+          - dlint
+          - pep8-naming
   - repo: https://github.com/dosisod/refurb
     rev: v2.0.0
     hooks:
@@ -125,8 +142,7 @@ repos:
           - --error-volume=3100
           - --error-difficulty=12
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.6.16
+    rev: 0.6.17
     hooks:
       - id: uv-lock
-        args:
-          - --locked
+        args: [--locked]

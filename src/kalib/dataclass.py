@@ -45,19 +45,24 @@ def capitalize_snakes(something):
     return ''.join(map(str.capitalize, filter(bool, something.split('_'))))
 
 
-class ConfigurationError(Exception): ...
+class ConfigurationError(Exception):
+    ...
 
 
-class ConfigurationEvaluationError(ConfigurationError): ...
+class ConfigurationEvaluationError(ConfigurationError):
+    ...
 
 
-class ConfigurationSchemeError(ConfigurationError): ...
+class ConfigurationSchemeError(ConfigurationError):
+    ...
 
 
-class ConfigurationSchemeMissingError(ConfigurationSchemeError): ...
+class ConfigurationSchemeMissingError(ConfigurationSchemeError):
+    ...
 
 
-class ConfigurationTypeError(ConfigurationSchemeError, TypeError): ...
+class ConfigurationTypeError(ConfigurationSchemeError, TypeError):
+    ...
 
 
 def fields_cast(data):
@@ -395,7 +400,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
     def copy(self, /, **kw):
         return self.load(self.export | kw)
 
-
     def __iter__(self):
         for key, field in self.__fields_dict__.items():
             try:
@@ -419,7 +423,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
         elif isinstance(other, dataclass):
             other = other.export
-
 
         if isinstance(other, dict):
             return from_dict({
@@ -452,7 +455,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
         elif isinstance(other, dataclass):
             other = other.export
 
-
         if isinstance(other, dict):
             export = self.export
             return from_dict({
@@ -462,7 +464,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
         msg = f'{Who.Is(other)} must be dict | {Who(dataclass)}'
         self.log.fatal(msg)
         raise TypeError(msg)
-
 
     def __sub__(self, other):
 
@@ -474,7 +475,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
         elif isinstance(other, dataclass):
             other = other.export
-
 
         if isinstance(other, dict):
             return self.load({
