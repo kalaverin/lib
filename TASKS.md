@@ -290,7 +290,7 @@ Check and format conf/pre-commit.yaml. If any changes are made, it stages the fi
 
     while true; do
         value="0"
-        uvx pre-commit run yamlfix --config "$file" --color always --file "$file" || value="$?"
+        uvx yamlfix "$file" || value="$?"
 
         if [ "$value" -eq 0 ]; then
             break
