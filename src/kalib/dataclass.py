@@ -260,16 +260,14 @@ class dataclass(Logging.Mixin):  # noqa: N801
                 if not set(data) - set(fields):
                     return data
 
-                msg = (f'{Who(cls)}: scheme {required=} '
-                       f"fields ({' '.join(tuple(fields))}) "
-                       f"couldn't match to {len(data):d} "
-                       f"taken data ({' '.join(data)})")
-
+                msg = f"taken data ({' '.join(data)})"
             else:
-                msg = (f'{Who(cls)}: scheme {required=} '
-                       f"fields ({' '.join(tuple(fields))}) "
-                       f"couldn't match to {len(args):d} "
-                       f'taken args: {Args(data, *args)}')
+                msg = f'taken args: {Args(data, *args)}'
+
+            msg = (
+                f'{Who(cls)}: scheme {required=} '
+                f"fields ({' '.join(tuple(fields))}) "
+                f"couldn't match to {len(data):d}; {msg}")
             raise ConfigurationEvaluationError(msg)
 
         if not required and isinstance(data, dict) and not data:
