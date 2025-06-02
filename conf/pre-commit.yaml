@@ -62,7 +62,7 @@ repos:
   #         - --config-file
   #         - conf/lint/yamlfix.yaml
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.0
+    rev: v1.37.1
     hooks:
       - id: yamllint
         args:
@@ -85,7 +85,7 @@ repos:
       - id: remove-crlf
       - id: remove-tabs
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.1
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         args:
@@ -102,7 +102,7 @@ repos:
           - --line-length
           - '89'
   - repo: https://github.com/sirwart/ripsecrets
-    rev: v0.1.9
+    rev: v0.1.11
     hooks:
       - id: ripsecrets
   - repo: https://github.com/radix-ai/auto-smart-commit
@@ -116,7 +116,7 @@ repos:
       - id: python-check-blanket-noqa
       - id: python-check-blanket-type-ignore
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.7
+    rev: v0.11.12
     hooks:
       - id: ruff
         args:
@@ -149,7 +149,7 @@ repos:
           - dlint
           - pep8-naming
   - repo: https://github.com/dosisod/refurb
-    rev: v2.0.0
+    rev: v2.1.0
     hooks:
       - id: refurb
   - repo: https://github.com/kalaverin/radon
@@ -162,7 +162,7 @@ repos:
           - --error-volume=3100
           - --error-difficulty=12
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.6.17
+    rev: 0.7.9
     hooks:
       - id: uv-lock
         args:

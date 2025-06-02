@@ -81,7 +81,8 @@ extend = "conf/tool.toml"
 [tool.refurb]
 ignore = [
   149,
-  176
+  176,
+  191
 ]
 
 [tool.ruff.lint.isort]

@@ -97,7 +97,7 @@ inline-quotes = "single"
 multiline-quotes = "double"
 
 [isort]
-known-first-party = ["myexlab"]
+known-first-party = ["kalib"]
 relative-imports-order = "closest-to-furthest"
 section-order = [
   "future",
@@ -109,7 +109,7 @@ section-order = [
 ]
 
 [isort.sections]
-"local-project" = ["app", "tests"]
+"local-project" = ["src", "tests"]
 
 [mccabe]
 max-complexity = 20

@@ -101,7 +101,7 @@ class Git(Logging.Mixin):
                     for tag in sort(git.tags, key=lambda x: x.name, reverse=True)}
 
                 if distances:
-                    return sorted(distances, key=lambda x: distances[x])[0]
+                    return min(distances, key=distances.get)
 
     @Property.Class.Parent
     def version(cls):
