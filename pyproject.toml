@@ -53,7 +53,7 @@ keywords = [
 name = "kalib"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.21.27"
+version = "0.21.28"
 
 [project.optional-dependencies]
 all = [
