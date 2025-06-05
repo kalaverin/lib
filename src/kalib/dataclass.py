@@ -574,7 +574,7 @@ class BaseAutoClass(Logging.Mixin):
 
 
 @cache
-def make_getters(field):
+def make_auto(field):
     Field, _field = field.capitalize(), f'_{field}'  # noqa: N806
 
     class autoclass(BaseAutoClass):  # noqa: N801
@@ -597,7 +597,6 @@ def make_getters(field):
                 (owner := get_owner(BaseAutoClass, field))
                 and owner != get_owner(class_of(self), field)
             ):
-
                 self.log.warning(
                     f'{Who(self)}.{field} property overrided', once=True)
 
@@ -687,8 +686,8 @@ def make_getters(field):
 
 def autoclass(*args):
     if len(args) == 1:
-        return make_getters(args[0])
-    return tuple(map(make_getters, args))
+        return make_auto(args[0])
+    return tuple(map(make_auto, args))
 
 
 def simple(classname, *names, **kw):
@@ -795,6 +794,7 @@ dataclass.flex      = DataClassFlexible
 dataclass.mutable   = DataClassMutable
 
 dataclass.auto      = autoclass
+dataclass.config    = autoclass('config')
 dataclass.simple    = simple
 dataclass.dict      = from_dict
 dataclass.module    = from_module
