@@ -1,34 +1,65 @@
 from functools import cached_property
 from time import sleep, time
 
+from kalib.dataclass import dataclass
+from kalib.descriptors import Property
 from kalib.loggers import Logging
 
 try:
     from redis_lock import RedisLock
+    from redis import Redis
     from redis.client import PubSub
+    from redis.connection import ConnectionPool
 
 except ImportError:
     raise ImportError('redis_lock is required, install kalib[redis]')
 
 
-class Flag(Logging.Mixin):
+class Pool(dataclass.config):
+
+    class PoolConfig(dataclass):
+        host                     : str = 'localhost'
+        port                     : int = 6379
+        db                       : int = 0
+        password                 : str | None = None
+        socket_timeout           : float | int = 5
+        socket_connect_timeout   : float | int = 5
+        socket_keepalive         : bool = True
+        socket_keepalive_options : dict | None = None
+        max_connections          : int = 50
+        retry_on_timeout         : bool = True
+        health_check_interval    : int = 30
+        encoding                 : str = 'utf-8'
+        encoding_errors          : str = 'strict'
+        decode_responses         : int = True
+
+    @Property.Class.Parent
+    def DefaultPool(cls):
+        return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
+
+
+class Flag(Pool):
 
     def __init__(
         self,
-        connector,
-        name, /,
-        wait    = 1.0,
-        locked  = False,
+        name,
+        /,
+        client  = None,
+        poll    = 1.0,
+        blocked = True,
         timeout = None,
         signal  = None,
     ):
         self.name = name
-        self.client = connector
-
-        self._wait    = wait
+        self._client  = client
+        self._poll    = poll
         self._signal  = signal
-        self._value   = self.value if locked else -1
         self._timeout = timeout
+        self._value   = self.value if blocked else -1
+
+    @cached_property
+    def client(self):
+        return self._client or self.DefaultPool
 
     @cached_property
     def condition(self):
@@ -36,18 +67,19 @@ class Flag(Logging.Mixin):
 
     #
 
-    def up(self):
+    def up(self) -> int:
         return self.client.incr(self.name)
 
     @property
-    def value(self):
+    def value(self) -> int:
         return int(self.client.get(self.name) or 0)
 
-    def wait(self, timeout=None):
+    def __call__(self, timeout: float | int | None =None) -> bool:
         counter = 0
         start = time()
+        wait = self._poll
 
-        if timeout := timeout or self.timeout:
+        if timeout := timeout or self._timeout:
             deadline = start + timeout
 
         condition = self.condition
@@ -56,6 +88,7 @@ class Flag(Logging.Mixin):
 
             if value != self._value:
                 delta = time() - start
+
                 if counter:
                     self.log.info(
                         f'{self.name}: {self._value} -> {value} '
@@ -64,12 +97,14 @@ class Flag(Logging.Mixin):
                 return True
 
             if timeout:
-                wait = min(deadline - time(), self._wait)
+                wait = min(deadline - time(), self._poll)
                 if wait < 0:
-                    return True
+                    return False
 
             sleep(wait)
             counter += 1
+
+    __bool__ = __call__
 
 
 class Lock(RedisLock):

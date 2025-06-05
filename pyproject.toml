@@ -9,6 +9,7 @@ build = [
   "setuptools"
 ]
 development = [
+  "better-exceptions>=0.3.3",
   "pytest>=8.3.5",
   "tomli>=2.2.1",
   "tomli-w>=1.2.0",
@@ -19,11 +20,6 @@ documentation = [
   "sphinx-autodoc-typehints>=3.0.1",
   "sphinx-rtd-dark-mode>=1.3.0",
   "sphinx-rtd-theme>=3.0.2"
-]
-redis = [
-  "hiredis>=3.2.1",
-  "redis-lock-py>=1.1.1",
-  "redis>=6.2.0"
 ]
 
 [project]
@@ -82,6 +78,12 @@ all = [
   "yarl>=1.20.0",
   "zstd>=1.5.6.7"
 ]
+redis = [
+  "hiredis>=3.2.1",
+  "redis-lock-py>=1.1.1",
+  "redis>=6.2.0"
+]
+
 
 [tool]
 extend = "conf/tool.toml"
