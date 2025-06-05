@@ -3,13 +3,12 @@ from time import sleep, time
 
 from kalib.dataclass import dataclass
 from kalib.descriptors import Property
-from kalib.loggers import Logging
 
 try:
-    from redis_lock import RedisLock
     from redis import Redis
     from redis.client import PubSub
     from redis.connection import ConnectionPool
+    from redis_lock import RedisLock
 
 except ImportError:
     raise ImportError('redis_lock is required, install kalib[redis]')
@@ -74,7 +73,7 @@ class Flag(Pool):
     def value(self) -> int:
         return int(self.client.get(self.name) or 0)
 
-    def __call__(self, timeout: float | int | None =None) -> bool:
+    def __call__(self, timeout: float | int | None = None) -> bool:
         counter = 0
         start = time()
         wait = self._poll
