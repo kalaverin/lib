@@ -384,7 +384,12 @@ Requires: venv
         initial="1"
     fi
 
-    uv export --color never --frozen --no-dev --format requirements-txt > "$file"
+    uv export \
+        --frozen \
+        --color never \
+        --no-dev \
+        --format requirements-txt \
+        > "$file"
 
     changes="$(git diff "$file")" || exit "$?"
     changes="$(printf "$changes" | wc -l)"
@@ -403,7 +408,12 @@ Requires: venv
         initial="1"
     fi
 
-    uv export --color never --frozen --only-group docs --format requirements-txt > "$file"
+    uv export \
+        --frozen \
+        --color never \
+        --only-group documentation \
+        --format requirements-txt \
+        > "$file"
 
     changes="$(git diff "$file")" || exit "$?"
     changes="$(printf "$changes" | wc -l)"

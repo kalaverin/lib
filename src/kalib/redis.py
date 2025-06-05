@@ -2,7 +2,7 @@ from functools import cached_property
 from time import sleep, time
 
 from kalib.dataclass import dataclass
-from kalib.descriptors import Property
+from kalib.descriptors import Property, cache
 
 try:
     from redis import Redis
@@ -37,7 +37,7 @@ class Pool(dataclass.config):
         return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
 
 
-class Flag(Pool):
+class IncrementableEvent(Pool):
 
     def __init__(
         self,
@@ -46,6 +46,7 @@ class Flag(Pool):
         client  = None,
         poll    = 1.0,
         blocked = True,
+        init    = False,
         timeout = None,
         signal  = None,
     ):
@@ -73,6 +74,19 @@ class Flag(Pool):
     def value(self) -> int:
         return int(self.client.get(self.name) or 0)
 
+    @property
+    def enabled(self):
+        return self.condition()
+
+    @property
+    def updated(self):
+        return self._value != self.value
+
+    def down(self):
+        self._value = self.value
+
+    #
+
     def __call__(self, timeout: float | int | None = None) -> bool:
         counter = 0
         start = time()
@@ -81,8 +95,7 @@ class Flag(Pool):
         if timeout := timeout or self._timeout:
             deadline = start + timeout
 
-        condition = self.condition
-        while condition():
+        while self.enabled:
             value = self.value
 
             if value != self._value:
@@ -104,6 +117,11 @@ class Flag(Pool):
             counter += 1
 
     __bool__ = __call__
+
+
+@cache
+def Flag(*args, **kw):
+    return IncrementableEvent(*args, **kw)
 
 
 class Lock(RedisLock):
