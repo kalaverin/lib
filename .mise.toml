@@ -1,4 +1,5 @@
 [env]
+BETTER_EXCEPTIONS = 1
 PROJECT_EXECUTE = "README.md"
 PROJECT_SECTION = "Tasks"
 _.python.venv = {path = ".venv", create = true}
