@@ -37,7 +37,7 @@ class Pool(dataclass.config):
         return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
 
 
-class IncrementableEvent(Pool):
+class Event(Pool):
 
     def __init__(
         self,
@@ -87,7 +87,7 @@ class IncrementableEvent(Pool):
 
     #
 
-    def __call__(self, timeout: float | int | None = None) -> bool:
+    def block(self, timeout: float | int | None = None) -> bool:
         counter = 0
         start = time()
         wait = self._poll
@@ -116,12 +116,12 @@ class IncrementableEvent(Pool):
             sleep(wait)
             counter += 1
 
-    __bool__ = __call__
+    __bool__ = block
 
 
 @cache
 def Flag(*args, **kw):
-    return IncrementableEvent(*args, **kw)
+    return Event(*args, **kw)
 
 
 class Lock(RedisLock):
