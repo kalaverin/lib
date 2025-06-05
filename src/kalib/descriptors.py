@@ -6,6 +6,7 @@ from time import time
 
 from kalib.classes import Nothing
 from kalib.internals import (
+    Is,
     Who,
     class_of,
     get_attr,
@@ -89,15 +90,16 @@ def invokation_context_check(func):
 
     @wraps(func)
     def context(self, node, *args, **kw):
+        klass = self.klass
         if (
-            self.klass is not None and
-            (node is None or self.klass != is_class(node))
+            klass is not None and
+            (node is None or klass != is_class(node))
         ):
             msg = (
                 f'{Who(func)} exception, '
                 f'{self.header_with_context(node)}, {node=}')
 
-            if node is None and not self.klass:
+            if node is None and not klass:
                 msg = f'{msg}; looks like as non-instance invokation'
             raise ContextFaultError(msg)
 
@@ -177,6 +179,7 @@ class BaseProperty:
 
 
 class InheritedClass(BaseProperty):
+
     """By default class property will be used parent class.
     This class change behavior to last inherited child.
     """
@@ -278,11 +281,26 @@ class MixedProperty(ClassProperty):
 class ClassCachedProperty(ClassProperty, Cached):
     """Class-level cached property that passes the original class as the first
     positional argument and replaces the original data-descriptor."""
-    """"""
 
 
 class MixedCachedProperty(MixedProperty, Cached):
     """Mixed-level cached property that replaces the original data-descriptor"""
+
+
+class PreCachedProperty(MixedProperty, Cached):
+    @invokation_context_check
+    def __set__(self, node, value):
+        if not Is.Class(node):
+            return value
+        return super().__set__(node, value)
+
+
+class PostCachedProperty(MixedProperty, Cached):
+    @invokation_context_check
+    def __set__(self, node, value):
+        if Is.Class(node):
+            return value
+        return super().__set__(node, value)
 
 
 class Property(BaseProperty):
@@ -315,6 +333,13 @@ class Property(BaseProperty):
     """Replaces the data-descriptor with a calculated result for instances, but when
     used in a class context, passes the class and just returns the result."""
     Mixed.Cached = InheritedClass.make_from(MixedCachedProperty)
+
+    Any = MixedProperty
+    Any.Pre    = PreCachedProperty
+    Any.Post   = PostCachedProperty
+    Any.Cached = InheritedClass.make_from(PostCachedProperty)
+    Any.Pre.Parent  = InheritedClass.make_from(PreCachedProperty)
+    Any.Post.Parent = InheritedClass.make_from(PostCachedProperty)
 
     @classmethod
     def Custom(cls, callback):  # noqa: N802
