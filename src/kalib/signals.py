@@ -32,7 +32,7 @@ def get_mtime():
 def quit_at(*, func=sys.exit, signal=None, errno=137, **kw):
     """Quit the program when the runned file is updated or signal is received."""
 
-    def handler(signum, frame):  # noqa: ARG001
+    def handler(*_):
         global NeedRestart  # noqa: PLW0603
         NeedRestart = True
         Logger.warning(f'{signal=} received, mark restart as needed')
@@ -104,11 +104,7 @@ class OnExit(metaclass=Singleton):
         for sig in signal.SIGINT, signal.SIGTERM, signal.SIGQUIT:
             bind(sig, self.signal_handler)
 
-    def signal_handler(
-        self,
-        signum : int,  # noqa: ARG002
-        frame  : FrameType | None,  # noqa: ARG002
-    ) -> None:
+    def signal_handler(self, _: int, frame: FrameType | None) -> None:
         self.teardown()
         sys.exit(1)
 

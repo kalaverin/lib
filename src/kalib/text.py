@@ -77,11 +77,8 @@ class Str:
         if isinstance(something, Exception):
             return f'{Who(something)}: {something}'
 
-        else:
-            msg = f"({Who(something)}) {something=} isn't valid bytes | str"
-            raise TypeError(msg)
-
-        return something
+        msg = f"({Who(something)}) {something=} isn't valid bytes | str"
+        raise TypeError(msg)
 
     @classmethod
     def to_bytes(cls, something, *args, **kw):
