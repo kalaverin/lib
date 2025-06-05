@@ -84,7 +84,6 @@ redis = [
   "redis>=6.2.0"
 ]
 
-
 [tool]
 extend = "conf/tool.toml"
 

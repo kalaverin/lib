@@ -33,7 +33,7 @@ class Pool(dataclass.config):
         decode_responses         : int = True
 
     @Property.Class.Parent
-    def DefaultPool(cls):
+    def DefaultPool(cls):  # noqa: N802
         return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
 
 
