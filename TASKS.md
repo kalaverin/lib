@@ -9,8 +9,12 @@ Requires: venv, update
 Runs all defined pre-commit hooks.
 
 ```bash
-    uvx yamlfix .
+    uvx yamlfix --exclude '.venv/' .
+    # uvx run black --target-version py311 --line-length 89 .
     uvx pre-commit run --config conf/pre-commit.yaml --color always --all
+    uvx vulture --min-confidence 66 'src/'
+    uvx bandit -r app/*
+    # uvx mypy .
 ```
 
 ## force-update
