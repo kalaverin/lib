@@ -451,8 +451,13 @@ def Module(obj):  # noqa: N802
     return Who(obj).rsplit('.', 1)[0]
 
 
+def Cast(obj):  # noqa: N802
+    return f'({Who(obj)}){obj}'
+
+
 Who.Name   = partial(Who, full=False)
 Who.Is     = Is
+Who.Cast   = Cast
 Who.Module = Module
 
 #
