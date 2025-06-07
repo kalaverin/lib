@@ -137,7 +137,10 @@ class dataclass(Logging.Mixin):  # noqa: N801
                 required = required,
             )
 
-        return tuple(map(make, cls.__dataclass_fields__.values()))
+        result = filter(
+            lambda x: ClassVar not in (x.type, get_origin(x.type)),
+            cls.__dataclass_fields__.values())
+        return tuple(map(make, result))
 
     @Property.Class.Cached
     def __fields_dict__(cls):
@@ -148,9 +151,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
             raise ConfigurationTypeError(msg)
 
         for key, field in fields.items():
-            if get_origin(field.type) is ClassVar:
-                continue
-
             value = field.default
             if (
                 field.default_class is not _MISSING_TYPE
@@ -213,7 +213,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                 try:
                     if (
                         class_of(field.type) not in (UnionType, _UnionGenericAlias)
-                        and issubclass(field.type, dataclass)
+                        and Is.subclass(field.type, dataclass)
                         and isinstance(data[key], dataclass | dict)
                     ):
                         data[key] = field.type.load(data.pop(key))
@@ -316,7 +316,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                     else:
                         msg = (
                             f'{Who(cls)}: ({field.typename}){key} '
-                            f'required, got {fields_cast(data)}')
+                            f'missing, got: {fields_cast(data)}')
                         raise ConfigurationEvaluationError(msg)
                 else:
                     value = None
