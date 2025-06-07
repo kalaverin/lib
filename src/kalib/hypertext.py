@@ -546,7 +546,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
         self.response = response
 
     @classmethod
-    def catch(cls, response, include=None, exclude=None):
+    def catch(cls, response, include=None, exclude=None, handler=None):
         if iscoroutine(response):
             msg = f"can't process {response=}, it's coroutine, await it first"
             raise RuntimeError(msg)
@@ -583,7 +583,10 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
             return response
 
         elif code // 100 >= 4 or code in (include or ()):  # noqa: PLR2004, raise all >=400
-            raise cls.by_code(code)(response)
+            e = cls.by_code(code)(response)
+            if handler and (replace := handler(e, response)):
+                raise replace
+            raise e
 
         return response
 
@@ -625,11 +628,9 @@ class HTTPUnknownStatusError(HTTPException):
 
 @lazy_proxy_to('generator', 'random')
 class Agent:
-    def __init__(self, browsers=None, min_percentage=None, os=None):
-        self._kw = {
-            'os'       : list(os or ('windows', 'macos', 'linux')),
-            'browsers' : list(browsers or ('edge', 'chrome')),
-            'min_percentage': min_percentage or 1.0}
+    def __init__(self, **kw):
+        self._kw = kw
+        kw.setdefault('platforms', ('desktop'))
 
     @Property.Cached
     def generator(self):
