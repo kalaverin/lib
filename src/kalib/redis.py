@@ -93,12 +93,16 @@ class Event(Pool):
 
     #
 
-    def block(self, timeout: float | int | None = None) -> bool:
+    def changed(
+        self,
+        timeout  : float | int | None = None, /,
+        infinite : bool = True,
+    ) -> bool:
         counter = 0
         start = time()
         wait = self._poll
 
-        if timeout := timeout or self._timeout:
+        if timeout := (timeout or self._timeout):
             deadline = start + timeout
 
         while self.on:
@@ -120,12 +124,12 @@ class Event(Pool):
             if timeout:
                 wait = min(deadline - time(), self._poll)
                 if wait < 0:
-                    return False
+                    return bool(infinite)
 
             sleep(wait)
             counter += 1
 
-    def enabled(self) -> bool:
+    def non_zero(self) -> bool:
         counter = 0
         start = time()
         wait = self._poll
@@ -134,13 +138,14 @@ class Event(Pool):
             if self.value:
                 delta = time() - start
                 if counter:
-                    self.log.info(f'{self.name} enabled ({delta:0.2f}s)')
+                    self.log.info(f'{self.name} ({delta:0.2f}s)')
                 return True
 
             sleep(wait)
             counter += 1
 
-    __bool__ = enabled
+    __call__ = changed
+    __bool__ = non_zero
 
 
 @cache
