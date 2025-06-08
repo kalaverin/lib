@@ -67,15 +67,21 @@ class Event(Pool):
 
     #
 
-    def up(self) -> int:
-        return self.client.incr(self.name)
+    def up(self, ttl: int=0) -> int:
+        result = self.client.incr(self.name)
+        if ttl:
+            self.client.expire(self.name, ttl)
+        return result
+
+    def drop(self) -> int:
+        return self.client.delete(self.name)
 
     @property
     def value(self) -> int:
         return int(self.client.get(self.name) or 0)
 
     @property
-    def enabled(self):
+    def on(self):
         return self.condition()
 
     @property
@@ -95,10 +101,13 @@ class Event(Pool):
         if timeout := timeout or self._timeout:
             deadline = start + timeout
 
-        while self.enabled:
+        while self.on:
             value = self.value
 
-            if value != self._value:
+            if not value:
+                self._value = value
+
+            elif value != self._value:
                 delta = time() - start
 
                 if counter:
@@ -116,7 +125,22 @@ class Event(Pool):
             sleep(wait)
             counter += 1
 
-    __bool__ = block
+    def enabled(self) -> bool:
+        counter = 0
+        start = time()
+        wait = self._poll
+
+        while self.on:
+            if self.value:
+                delta = time() - start
+                if counter:
+                    self.log.info(f'{self.name} enabled ({delta:0.2f}s)')
+                return True
+
+            sleep(wait)
+            counter += 1
+
+    __bool__ = enabled
 
 
 @cache
