@@ -49,8 +49,10 @@ class Event(Pool):
         init    = False,
         timeout = None,
         signal  = None,
+        ttl     = None,
     ):
         self.name = name
+        self._ttl     = ttl
         self._client  = client
         self._poll    = poll
         self._signal  = signal
@@ -69,7 +71,7 @@ class Event(Pool):
 
     def up(self, ttl: int=0) -> int:
         result = self.client.incr(self.name)
-        if ttl:
+        if ttl := int(self._ttl or ttl):
             self.client.expire(self.name, ttl)
         return result
 
@@ -95,27 +97,29 @@ class Event(Pool):
 
     def changed(
         self,
+        poll     : float | int | None = None,
         timeout  : float | int | None = None, /,
         infinite : bool = True,
     ) -> bool:
         counter = 0
         start = time()
-        wait = self._poll
+        wait = float(self._poll or poll)
 
         if timeout := (timeout or self._timeout):
             deadline = start + timeout
 
-        while self.on:
+        condition = self.on
+        while condition:
             value = self.value
 
             if not value:
                 self._value = value
 
-            elif value != self._value:
+            elif self._value != value:
                 delta = time() - start
 
                 if counter:
-                    self.log.info(
+                    self.log.debug(
                         f'{self.name}: {self._value} -> {value} '
                         f'({delta:0.2f}s)')
                 self._value = value
