@@ -26,6 +26,7 @@ from kalib.datastructures import (
     pack,
     serializer,
     to_namedtuple,
+    to_namedtuple as Tuple,
     unpack,
 )
 from kalib.descriptors import (
@@ -54,7 +55,6 @@ from kalib.internals import (
     Who,
     class_of,
     is_class,
-    issubstance,
     stacktrace,
     unique,
 )
@@ -83,8 +83,8 @@ from kalib.versions import (
 )
 
 __all__ = (
-    'HTTP',
     'Git',
+    'HTTP',
     'Is',
     'Logging',
     'Missing',
@@ -94,6 +94,7 @@ __all__ = (
     'Property',
     'Str',
     'Time',
+    'Tuple',
     'Who',
     'add_path',
     'autoclass',
@@ -108,7 +109,6 @@ __all__ = (
     'importer',
     'internals',
     'is_class',
-    'issubstance',
     'json',
     'lazy_proxy_to',
     'loads',

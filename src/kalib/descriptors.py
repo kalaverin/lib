@@ -12,7 +12,6 @@ from kalib.internals import (
     get_attr,
     get_owner,
     is_class,
-    issubstance,
 )
 
 __all__ = 'Property', 'cache'
@@ -38,7 +37,7 @@ def cache(limit=None):
 
 
 def call_descriptor(descriptor):
-    if issubstance(descriptor, BaseProperty):
+    if Is.subclass(descriptor, BaseProperty):
         return descriptor.call
 
     func = getattr(descriptor, 'fget', Nothing)
@@ -201,6 +200,8 @@ class Cached(BaseProperty):
 
     @classmethod
     def expired_by(cls, callback):
+        # result = partial(cls, expired=callback)
+        # result.func = callback
         return partial(cls, expired=callback)
 
     @classmethod

@@ -30,7 +30,6 @@ from kalib.internals import (
     is_class,
     is_collection,
     is_iterable,
-    issubstance,
     iter_inheritance,
     unique,
 )
@@ -145,7 +144,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
     @Property.Class.Cached
     def __fields_dict__(cls):
         fields = {f.name: f for f in cls.__fields__}
-        if not issubstance(cls, dataclass):
+        if not Is.subclass(cls, dataclass):
             parents = class_of(cls).__mro__
             msg = f'{Who(cls)} must be a dataclass, {parents=}'
             raise ConfigurationTypeError(msg)
@@ -154,7 +153,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
             value = field.default
             if (
                 field.default_class is not _MISSING_TYPE
-                and not issubstance(value, field.type)
+                and not Is.subclass(value, field.type)
             ):
                 config = json.repr(fields)
                 msg = (
@@ -305,13 +304,13 @@ class dataclass(Logging.Mixin):  # noqa: N801
         for key, field in unique(fields, exclude=result):
             value = field.default
 
-            if issubstance(value, _MISSING_TYPE):
+            if Is.subclass(value, _MISSING_TYPE):
                 types = getattr(field.type, '__args__', None)
                 if (
                     (field.typename != 'builtins.NoneType') and
-                    (not types or not issubstance(None, types))
+                    (not types or not Is.subclass(None, types))
                 ):
-                    if not issubstance(field.factory, _MISSING_TYPE):
+                    if not Is.subclass(field.factory, _MISSING_TYPE):
                         value = field.factory()
                     else:
                         msg = (
@@ -537,7 +536,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                 if Is.Class(objecttype) and isinstance(value, objecttype):
                     continue
 
-            if not issubstance(value, objecttype):
+            if not Is.subclass(value, objecttype):
                 result[key] =(
                     f'({field.typename}){key} invalid type ({Who.Is(value)})')
 
@@ -562,7 +561,7 @@ class BaseAutoClass(Logging.Mixin):
     def __autoclasses_fields__(cls):
         hier = iter_inheritance(
             cls, exclude_stdlib=False,
-            include=lambda x: issubstance(x, BaseAutoClass))
+            include=lambda x: Is.subclass(x, BaseAutoClass))
 
         for klass in hier:
             if klass is get_owner(klass, '__field__') and klass.__field__:
@@ -635,7 +634,7 @@ def make_auto(field):
             msg = f"{Who(self)}.{Field} isn't defined or None instead dataclass"
             raise ConfigurationSchemeMissingError(msg)
 
-        if not issubclass(scheme, dataclass):
+        if not Is.subclass(scheme, dataclass):
             inheritance = ' -> '.join(map(Who, scheme.__mro_classes__))
             msg = f'{Who(self)}.{Field} must be dataclass, {inheritance=}'
             raise ConfigurationTypeError(msg)

@@ -42,15 +42,14 @@ def is_collection(obj):
         isinstance(obj, Collection) and
         isinstance(obj, Sequence) and
         not isinstance(obj, bytes | str)
-    )
+    ) or is_mapping(obj)
 
 
 def is_mapping(obj):
     if isinstance(obj, Mapping):
         return True
 
-    cls = class_of(obj)
-    if issubclass(cls, dict):
+    if issubclass(class_of(obj), dict):
         return True
 
     return all(map(
@@ -155,66 +154,22 @@ def class_of(obj):
 
 
 def subclass(obj, types):
-    return issubclass(class_of(obj), types)
-
-
-def issubstance(obj, types):  # noqa: PLR0911, PLR0912
     if types is None:
         return False
 
-    if types in (Any, obj):
+    if types in (Any, obj, object):
         return True
 
-    if get_origin(types) in (Generic, Union, UnionType):
-        klass = class_of(obj)
-        included_types = get_args(types)
-        if Any in included_types:
-            return True
-
-        for i in included_types:
-            try:
-                if issubstance(klass, i):
-                    return True
-            except TypeError:
-                continue
-        return False
-
-    if is_collection(types) and not isinstance(types, tuple):
-        types = tuple(types)
-
-    if is_collection(types):
-        if not types:
-            return False
-
-        elif Any in types:
-            return True
-
-    if get_args(types):
-        types = get_origin(types)
-
-    if types in (Any, obj):
-        return True
-
-    if is_collection(types) and obj in types:
+    if obj is None and types is class_of(None):
         return True
 
     try:
-        if (result := (
-            isclass(obj) and
-            (obj is types or issubclass(obj, types)))
-        ):
-            return result
-
-        if not is_collection(types):
-            return isinstance(obj, types)
-
-        for sometype in types:
-            if (result := issubstance(obj, sometype)):
-                return result
+        return issubclass(class_of(obj), types)
 
     except TypeError as e:
-        msg = f'invalid check what {Who.Is(obj)} is instance of {Who.Is(types)}'
-        raise TypeError(msg) from e
+        if origin := get_origin(types):
+            return issubclass(class_of(obj), origin)
+        raise e
 
 
 def iter_inheritance(  # noqa: PLR0913
