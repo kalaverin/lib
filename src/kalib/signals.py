@@ -49,12 +49,18 @@ def quit_at(*, func=sys.exit, signal=None, errno=137, **kw):
             func(errno)
             return False
 
-        elif initial_stamp != (ctime := get_mtime()):
-            file = str(get_selfpath())
-            Logger.warning(
-                f'{file=} updated {time.time() - ctime:.2f} seconds ago, quit..')
-            func(errno)
-            return False
+        try:
+            if initial_stamp != (ctime := get_mtime()):
+                file = str(get_selfpath())
+                Logger.warning(
+                    f'{file=} updated {time.time() - ctime:.2f} seconds ago, quit..')
+                func(errno)
+                return False
+
+        except FileNotFoundError:
+                Logger.warning(
+                    f'{get_selfpath()} not found, quit..')
+                return False
 
         if sleep := (sleep or kw.get('sleep', 0.0)):
             time.sleep(sleep)
