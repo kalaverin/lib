@@ -46,7 +46,6 @@ class Event(Pool):
         client  = None,
         poll    = 1.0,
         blocked = True,
-        init    = False,
         timeout = None,
         signal  = None,
         ttl     = None,
