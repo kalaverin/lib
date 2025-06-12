@@ -115,10 +115,7 @@ packages = [
 "" = "src"
 
 [tool.uv]
-default-groups = [
-  "development",
-  "documentation"
-]
+default-groups = ["development"]
 
 [tool.yamlfix]
 line_length = 89
