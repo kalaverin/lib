@@ -69,7 +69,7 @@ class Event(Pool):
 
     #
 
-    def up(self, ttl: int=0) -> int:
+    def up(self, ttl: int = 0) -> int:
         result = self.client.incr(self.name)
         if ttl := int(self._ttl or ttl):
             self.client.expire(self.name, ttl)
@@ -153,7 +153,7 @@ class Event(Pool):
 
 
 @cache
-def Flag(*args, **kw):
+def Flag(*args, **kw):  # noqa: N802
     return Event(*args, **kw)
 
 

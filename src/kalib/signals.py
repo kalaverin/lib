@@ -58,9 +58,9 @@ def quit_at(*, func=sys.exit, signal=None, errno=137, **kw):
                 return False
 
         except FileNotFoundError:
-                Logger.warning(
-                    f'{get_selfpath()} not found, quit..')
-                return False
+            Logger.warning(
+                f'{get_selfpath()} not found, quit..')
+            return False
 
         if sleep := (sleep or kw.get('sleep', 0.0)):
             time.sleep(sleep)

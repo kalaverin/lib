@@ -26,7 +26,7 @@ from kalib.datastructures import (
     pack,
     serializer,
     to_namedtuple,
-    to_namedtuple as Tuple,
+    to_namedtuple as Tuple,  # noqa: N812
     unpack,
 )
 from kalib.descriptors import (

@@ -33,7 +33,7 @@ flake8-use-fstring = [
   '-FS003'  # f-string missing prefix
 ]
 mccabe = ["+*"]
-pep8-naming = ["+*", '-N805']
+pep8-naming = ["+*", '-N805', '-N812']
 pycodestyle = [
   "+*",
   "-W503",  # No longer applies, incompatible with newer version of PEP8
