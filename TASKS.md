@@ -10,11 +10,29 @@ Runs all defined pre-commit hooks.
 
 ```bash
     uvx yamlfix --exclude '.venv/' .
-    # uvx run black --target-version py311 --line-length 89 .
     uvx pre-commit run --config conf/pre-commit.yaml --color always --all
-    uvx vulture --min-confidence 66 'src/'
-    uvx bandit -r app/*
-    # uvx mypy .
+
+    # uv run ruff check .
+    # uv run black --check --diff .
+
+    uv run -q vulture --min-confidence 66 'src/'
+    # uv run -q mypy --config-file conf/mypy.toml .
+
+    # uv run -q bandit \
+    #     --quiet \
+    #     --recursive \
+    #     --severity-level all \
+    #     --confidence-level all \
+    #     --configfile pyproject.toml \
+    #     src/
+
+    # uv run -q bandit \
+    #     --quiet \
+    #     --recursive \
+    #     --confidence-level all \
+    #     --configfile pyproject.toml \
+    #     --skip B101,B105,B106 \
+    #     tests/
 ```
 
 ## force-update
