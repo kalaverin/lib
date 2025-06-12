@@ -23,8 +23,8 @@ from re import search, sub
 from sys import modules
 from sysconfig import get_paths
 from traceback import extract_stack, format_stack
-from types import FunctionType, LambdaType, UnionType
-from typing import Any, Generic, Union, get_args, get_origin
+from types import FunctionType, LambdaType
+from typing import Any, get_origin
 
 Collections = deque, dict, list, set, tuple, bytearray
 Primitives  = bool, float, int, str, complex, bytes
