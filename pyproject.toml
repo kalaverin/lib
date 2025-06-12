@@ -107,7 +107,7 @@ known-first-party = [
 known-third-party = []
 
 [tool.setuptools]
-packages = []
+packages = ["kalib"]
 
 [tool.setuptools.package-dir]
 "" = "src"
