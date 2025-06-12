@@ -128,7 +128,7 @@ class Event(Pool):
             if timeout:
                 wait = min(deadline - time(), self._poll)
                 if wait < 0:
-                    return bool(infinite)
+                    return infinite
 
             sleep(wait)
             counter += 1
