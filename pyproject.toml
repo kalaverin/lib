@@ -60,7 +60,7 @@ keywords = [
 name = "kalib"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.21.30"
+version = "0.21.31"
 
 [project.optional-dependencies]
 all = [
@@ -107,7 +107,9 @@ known-first-party = [
 known-third-party = []
 
 [tool.setuptools]
-packages = ["kalib"]
+packages = [
+  "kalib"
+]
 
 [tool.setuptools.package-dir]
 "" = "src"
