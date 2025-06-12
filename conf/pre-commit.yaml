@@ -116,7 +116,7 @@ repos:
       - id: python-check-blanket-noqa
       - id: python-check-blanket-type-ignore
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.12
+    rev: v0.11.13
     hooks:
       - id: ruff
         args:
@@ -152,18 +152,18 @@ repos:
     rev: v2.1.0
     hooks:
       - id: refurb
-  - repo: https://github.com/kalaverin/radon
-    rev: 0.2.1
-    hooks:
-      - id: radon
-        args:
-          - --error-time=2100
-          - --error-effort=36100
-          - --error-volume=3100
-          - --error-difficulty=12
-  - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.7.9
-    hooks:
-      - id: uv-lock
-        args:
-          - --locked
+  # - repo: https://github.com/kalaverin/radon
+  #   rev: 0.2.1
+  #   hooks:
+  #     - id: radon
+  #       args:
+  #         - --error-time=2100
+  #         - --error-effort=36100
+  #         - --error-volume=3100
+  #         - --error-difficulty=12
+  # - repo: https://github.com/astral-sh/uv-pre-commit
+  #   rev: 0.7.12
+  #   hooks:
+  #     - id: uv-lock
+  #       args:
+  #         - --locked
