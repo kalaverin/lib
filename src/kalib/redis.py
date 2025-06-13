@@ -96,8 +96,8 @@ class Event(Pool):
 
     def changed(
         self,
-        poll     : float | int | None = None,
         timeout  : float | int | None = None, /,
+        poll     : float | int | None = None,
         infinite : bool = True,
     ) -> bool:
         counter = 0
