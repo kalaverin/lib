@@ -538,7 +538,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
             if not Is.subclass(value, objecttype):
                 result[key] =(
-                    f'({field.typename}){key} invalid type ({Who.Is(value)})')
+                    f'({field.typename}){key} invalid type {Who.Cast(value)}')
 
         if result:
             msg = f"{Who(self)}: {'; '.join(sort(result))}"

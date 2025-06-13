@@ -23,8 +23,8 @@ from re import search, sub
 from sys import modules
 from sysconfig import get_paths
 from traceback import extract_stack, format_stack
-from types import FunctionType, LambdaType
-from typing import Any, get_origin
+from types import FunctionType, LambdaType, UnionType
+from typing import Any, GenericAlias, get_args, get_origin
 
 Collections = deque, dict, list, set, tuple, bytearray
 Primitives  = bool, float, int, str, complex, bytes
@@ -163,13 +163,31 @@ def subclass(obj, types):
     if obj is None and types is class_of(None):
         return True
 
-    try:
-        return issubclass(class_of(obj), types)
+    cls = class_of(obj)
 
-    except TypeError as e:
-        if origin := get_origin(types):
-            return issubclass(class_of(obj), origin)
-        raise e
+    if origin := get_origin(types):
+        args = get_args(types)
+
+        if args and (
+            Any in args
+            or cls in args
+        ):
+            # Any | None
+            return True
+
+        if (
+            origin is UnionType and (
+                issubclass(cls, types)
+                or (args and cls in args)
+            )
+        ):
+            return True
+
+        if class_of(types) is GenericAlias:
+            # dict[str, str])
+            return issubclass(cls, origin)
+
+    return issubclass(cls, types)
 
 
 def iter_inheritance(  # noqa: PLR0913

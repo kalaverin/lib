@@ -62,6 +62,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 version = "0.21.31"
 
+[project.license]
+text = "BSD License"
+
 [project.optional-dependencies]
 all = [
   "base2048>=0.1.3",
