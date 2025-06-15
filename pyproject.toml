@@ -74,18 +74,18 @@ data = [
   "lxml>=5.4.0",
   "msgpack>=1.1.0",
   "python-magic>=0.4.27",
-  "yarl>=1.20.0",
-]
-usual = [
-  "natsort>=8.4.0",
-  "orjson>=3.10.16",
-  "xxhash>=3.5.0",
-  "zstd>=1.5.6.7",
+  "yarl>=1.20.0"
 ]
 redis = [
   "hiredis>=3.2.1",
   "redis-lock-py>=1.1.1",
   "redis>=6.2.0"
+]
+usual = [
+  "natsort>=8.4.0",
+  "orjson>=3.10.16",
+  "xxhash>=3.5.0",
+  "zstd>=1.5.6.7"
 ]
 
 [tool]
