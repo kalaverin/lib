@@ -60,7 +60,7 @@ keywords = [
 name = "kalib"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.21.31"
+version = "0.21.32"
 
 [project.license]
 text = "BSD License"
@@ -113,7 +113,9 @@ packages = [
 "" = "src"
 
 [tool.uv]
-default-groups = ["development"]
+default-groups = [
+  "development"
+]
 
 [tool.yamlfix]
 line_length = 89
