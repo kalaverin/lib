@@ -1,16 +1,3 @@
-from kalib import (
-    classes,
-    datastructures,
-    descriptors,
-    importer,
-    internals,
-    loggers,
-    misc,
-    monkey,
-    signals,
-    text,
-    versions,
-)
 from kalib.classes import (
     Missing,
     Nothing,
@@ -20,18 +7,14 @@ from kalib.dataclass import (
     dataclass,
 )
 from kalib.datastructures import (
-    dumps,
+    Tuple,
     json,
-    loads,
-    pack,
     serializer,
-    to_namedtuple,
-    to_namedtuple as Tuple,  # noqa: N812
-    unpack,
 )
 from kalib.descriptors import (
-    Property,
     cache,
+    class_property,
+    mixed_property,
     pin,
 )
 from kalib.exceptions import (
@@ -53,9 +36,6 @@ from kalib.importer import (
 from kalib.internals import (
     Is,
     Who,
-    class_of,
-    is_class,
-    stacktrace,
     unique,
 )
 from kalib.loggers import (
@@ -65,7 +45,7 @@ from kalib.loggers import (
 from kalib.misc import (
     Now,
     Timer,
-    lazy_proxy_to,
+    proxy_to,
     stamp,
     tty,
 )
@@ -81,7 +61,6 @@ from kalib.text import (
 from kalib.versions import (
     Git,
 )
-
 __all__ = (
     'Git',
     'HTTP',
@@ -91,7 +70,6 @@ __all__ = (
     'Monkey',
     'Nothing',
     'Now',
-    'Property',
     'Str',
     'Time',
     'Tuple',
@@ -99,41 +77,24 @@ __all__ = (
     'add_path',
     'autoclass',
     'cache',
-    'class_of',
-    'classes',
+    'class_property',
     'dataclass',
-    'datastructures',
-    'descriptors',
-    'dumps',
     'exception',
-    'importer',
-    'internals',
-    'is_class',
     'json',
-    'lazy_proxy_to',
-    'loads',
     'logger',
-    'loggers',
-    'misc',
-    'monkey',
+    'mixed_property',
     'optional',
-    'pack',
     'pin',
+    'proxy_to',
     'quit_at',
     'required',
     'serializer',
-    'signals',
     'sort',
-    'stacktrace',
     'stamp',
-    'text',
     'to_ascii',
     'to_bytes',
-    'to_namedtuple',
     'tty',
     'unique',
-    'unpack',
-    'versions',
 )
 
 Time = Timer()

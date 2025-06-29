@@ -4,7 +4,7 @@ from pathlib import Path
 from re import match
 
 from kalib.datastructures import json
-from kalib.descriptors import Property, cache
+from kalib.descriptors import cache, pin
 from kalib.importer import optional, required, sort
 from kalib.internals import Who, iter_stack, sourcefile
 from kalib.loggers import Logging
@@ -17,11 +17,11 @@ logger = Logging.Default
 
 class Git(Logging.Mixin):
 
-    @Property.Class.Cached
+    @pin.cls
     def Repo(cls):  # noqa: N802
         return required('git.Repo')
 
-    @Property.Class.Parent
+    @pin.cls.here
     def root(cls):
         expect = suppress(required('git.exc.InvalidGitRepositoryError', quiet=True))
         with expect, cls.Repo(
@@ -31,13 +31,13 @@ class Git(Logging.Mixin):
             return Path(repo.working_tree_dir).resolve()
         cls.log.verbose('not detected')
 
-    @Property.Class.Parent
+    @pin.cls.here
     def repo(cls):
         if (path := cls.root):
             return cls.Repo(path, search_parent_directories=True)
         cls.log.verbose('not found')
 
-    @Property.Class.Parent
+    @pin.cls.here
     def from_path(cls):
         root = cls.root
 
@@ -67,7 +67,7 @@ class Git(Logging.Mixin):
 
         return explorer
 
-    @Property.Class.Parent
+    @pin.cls.here
     def files(cls):
         result = []
         prefix = len(str(cls.root)) + 1
@@ -79,13 +79,13 @@ class Git(Logging.Mixin):
 
         return tuple(sort(result))
 
-    @Property.Class.Parent
+    @pin.cls.here
     def tree(cls):
         return {
             path: str(cls.from_path(path)) for path in cls.files
             if cls.from_path(path) is not None}
 
-    @Property.Class.Parent
+    @pin.cls.here
     def tag(cls):
         with suppress(Exception), cls.repo as git:
             head = git.head.commit
@@ -103,7 +103,7 @@ class Git(Logging.Mixin):
                 if distances:
                     return min(distances, key=distances.get)
 
-    @Property.Class.Parent
+    @pin.cls.here
     def version(cls):
         with suppress(ImportError):
             if cls.tag and (version := optional('versioneer.get_version')):

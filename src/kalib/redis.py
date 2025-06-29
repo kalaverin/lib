@@ -1,8 +1,7 @@
-from functools import cached_property
 from time import sleep, time
 
 from kalib.dataclass import dataclass
-from kalib.descriptors import Property, cache
+from kalib.descriptors import cache, pin
 
 try:
     from redis import Redis
@@ -32,7 +31,7 @@ class Pool(dataclass.config):
         encoding_errors          : str = 'strict'
         decode_responses         : int = True
 
-    @Property.Class.Parent
+    @pin.cls.here
     def DefaultPool(cls):  # noqa: N802
         return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
 
@@ -58,11 +57,11 @@ class Event(Pool):
         self._timeout = timeout
         self._value   = self.value if blocked else -1
 
-    @cached_property
+    @pin.native
     def client(self):
         return self._client or self.DefaultPool
 
-    @cached_property
+    @pin.native
     def condition(self):
         return self._signal or (lambda: 1)
 
@@ -141,7 +140,7 @@ class Event(Pool):
             if self.value:
                 delta = time() - start
                 if counter:
-                    self.log.info(f'{self.name} ({delta:0.2f}s)')
+                    self.log.debug(f'{self.name} ({delta:0.2f}s)')
                 return True
 
             sleep(wait)
@@ -171,7 +170,7 @@ class Lock(RedisLock):
         self._timeout = timeout or 86400 * 365 * 10
         super().__init__(connector, name, blocking_timeout=self._timeout)
 
-    @cached_property
+    @pin.native
     def condition(self):
         return self._signal or (lambda: 1)
 

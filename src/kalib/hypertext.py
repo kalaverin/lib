@@ -11,11 +11,11 @@ from typing import ClassVar
 
 from kalib.dataclass import dataclass
 from kalib.datastructures import Encoding, json, loads, pack, serializer, unpack
-from kalib.descriptors import Property, cache, parent_call
+from kalib.descriptors import cache, class_property, parent_call, pin
 from kalib.importer import optional, required, sort
 from kalib.internals import Is, Who
 from kalib.loggers import Logging
-from kalib.misc import lazy_proxy_to
+from kalib.misc import proxy_to
 from kalib.text import Str
 
 
@@ -64,7 +64,7 @@ def build_enumerate(name, *order):
         raise ValueError(msg)
 
     class Special(dict):
-        @Property.Cached
+        @pin
         def _member_names(self):
             return tuple(filter(lambda x: not x.startswith('_'), self))
 
@@ -183,7 +183,7 @@ class HTTPResponse(Logging.Mixin):
         self._raw = response
         self._content = content
 
-    @Property.Cached
+    @pin
     def _headers(self):
         result = defaultdict(list)
         for key, value in self._raw.headers.items():
@@ -191,7 +191,7 @@ class HTTPResponse(Logging.Mixin):
         return {
             k: tuple(v) if len(v) > 1 else v[0] for k, v in result.items()}
 
-    @Property.Cached
+    @pin
     def _response_params(self):
         return {
             'url'     : self._raw.url,
@@ -199,25 +199,25 @@ class HTTPResponse(Logging.Mixin):
             'headers' : self._headers,
             'content' : self._content}
 
-    @Property.Cached
+    @pin
     def _response(self):
         return ResponseInternals.load(self._response_params)
 
-    @Property.Cached
+    @pin
     def ok(self):
         return not self.exception.not_ok
 
     # just mapping to common internal structure
 
-    @Property.Cached
+    @pin
     def url(self):
         return str(self._response.url)
 
-    @Property.Cached
+    @pin
     def status(self):
         return int(self._response.status)
 
-    @Property.Cached
+    @pin
     def reason(self):
         if (reason := self._response.reason):
             return reason
@@ -225,23 +225,23 @@ class HTTPResponse(Logging.Mixin):
         reason = HTTPException.Statuses[self.status]
         return f'{reason.phrase}: {reason.description}'
 
-    @Property.Cached
+    @pin
     def headers(self):
         return self._response.headers
 
-    @Property.Cached
+    @pin
     def headerstring(self):
         return json.repr(self.headers)
 
-    @Property.Cached
+    @pin
     def content(self):
         return self._response.content
 
-    @Property.Cached
+    @pin
     def exception(self):
         return HTTPException.by_code(self.status)
 
-    @Property.Cached
+    @pin
     def mime(self):
         msg = (
             f"could't detect mime-type for {self.url!r} response: "
@@ -268,31 +268,31 @@ class HTTPResponse(Logging.Mixin):
 
     # content related properties
 
-    @Property.Cached
+    @pin
     def bytes(self):
         return Str.to_bytes(self.content)
 
-    @Property.Cached
+    @pin
     def text(self):
         return Str.to_str(self.content)
 
-    @Property.Cached
+    @pin
     def feed(self):
         return required('feedparser.parse')(self.content)
 
-    @Property.Cached
+    @pin
     def json(self):
         return json.loads(self.content)
 
-    @Property.Cached
+    @pin
     def html(self):
         return required('lxml.html.document_fromstring')(self.content)
 
-    @Property.Cached
+    @pin
     def pack(self):
         return required('msgpack.loads')(self.content, encoding='utf-8', use_list=False)
 
-    @Property.Cached
+    @pin
     def xml(self):
         return required('lxml.etree').fromstring(self.content)
 
@@ -323,7 +323,7 @@ class HTTPResponse(Logging.Mixin):
         'text/plain'            : 'text',
     }
 
-    @Property.Cached
+    @pin
     def content_type(self):
         def getter(x):
             with suppress(KeyError):
@@ -333,7 +333,7 @@ class HTTPResponse(Logging.Mixin):
             if (content_type := getter(header)):
                 return content_type
 
-    @Property.Cached
+    @pin
     def data(self):
 
         @cache
@@ -372,7 +372,7 @@ class AioHttpResponse(HTTPResponse):
         return HTTPException.catch(
             cls(response, content=await response.read()), **kw)
 
-    @Property.Cached
+    @pin
     @parent_call
     def _response_params(self, parent):
         return parent | {'status': self._raw.status}
@@ -385,7 +385,7 @@ class RequestsResponse(HTTPResponse):
         return HTTPException.catch(
             cls(response, content=response.content), **kw)
 
-    @Property.Cached
+    @pin
     @parent_call
     def _response_params(self, parent):
         return parent | {'status': self._raw.status_code}
@@ -398,7 +398,7 @@ class HTTPxResponse(HTTPResponse):
         return HTTPException.catch(
             cls(response, content=response.content), **kw)
 
-    @Property.Cached
+    @pin
     def _response_params(self):
         return {
             'url'     : self._raw.url,
@@ -423,14 +423,14 @@ class FileResponse(HTTPResponse):
             raise ValueError(f"can't get url from {headers=}")
         return HTTPException.catch(self, **kw)
 
-    @Property.Cached
+    @pin
     def _headers(self):
         headers = dict(self._raw)
         del headers['status']
         del headers['url']
         return headers
 
-    @Property.Cached
+    @pin
     def _response_params(self):
         headers = dict(self._raw)
         return {
@@ -441,13 +441,13 @@ class FileResponse(HTTPResponse):
             'reason'  : None,
         }
 
-    @Property.Cached
+    @pin
     def content(self):
         with self._content.open('rb') as fd:
             return fd.read()
 
 
-@lazy_proxy_to('state', 'description', 'phrase', 'value', Property.Class.Cached)
+@proxy_to('state', 'description', 'phrase', 'value', pin.cls)
 @bind_main_classes_as_property
 class HTTPException(Exception, Logging.Mixin):  # noqa: N818
 
@@ -468,7 +468,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
             r'((^[a-z])|(_[a-z]))',
             lambda x: x.group(1)[-1].upper(), text.lower())
 
-    @Property.Class.Parent
+    @pin.cls.here
     def exceptions(cls):
         @cache
         def make_parent_class(no):
@@ -509,7 +509,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
 
         return result
 
-    @Property.Class.Cached
+    @pin.cls
     def not_ok(cls):
         return not issubclass(cls, cls.Allright)
 
@@ -590,7 +590,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
 
         return response
 
-    @Property.Cached
+    @pin
     def args(self):
         return (
             self.response.url,
@@ -600,7 +600,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
             self.response.mime.as_dict if self.response.mime else {},
         )
 
-    @Property.Cached
+    @pin
     def verbose(self):
         response = self.response
 
@@ -626,13 +626,13 @@ class HTTPUnknownStatusError(HTTPException):
     ...
 
 
-@lazy_proxy_to('generator', 'random')
+@proxy_to('generator', 'random')
 class Agent:
     def __init__(self, **kw):
         self._kw = kw
         kw.setdefault('platforms', ('desktop'))
 
-    @Property.Cached
+    @pin
     def generator(self):
         return required('fake_useragent.UserAgent')(**self._kw)
 
@@ -640,12 +640,12 @@ class Agent:
     def any(self):
         return self.generator.random
 
-    @Property.Class
+    @class_property
     def header(cls):
         return {'User-Agent': cls().any}
 
 
-@lazy_proxy_to('cookies', 'keys', 'values', '__iter__')
+@proxy_to('cookies', 'keys', 'values', '__iter__')
 class Cookies:
     skip_keys = ('domain', 'expires', 'path')
 
@@ -743,7 +743,7 @@ class Cookies:
 
         yield from self.iterstrings(lines)
 
-    @Property.Cached
+    @pin
     def cookies(self):
         def iter_tokens():
             for line in self.iterraw():
@@ -769,23 +769,23 @@ class Cookies:
 
         return result
 
-    @Property.Cached
+    @pin
     def as_data(self):
         return tuple(sort(i.OutputString() for i in self.cookies.values()))
 
-    @Property.Cached
+    @pin
     def as_dict(self):
         return {i.key: i.value for i in self.values()}
 
-    @Property.Cached
+    @pin
     def as_json(self):
         return json.dumps(self.as_data)
 
-    @Property.Cached
+    @pin
     def as_text(self):
         return '\n'.join(self.as_data)
 
-    @Property.Cached
+    @pin
     def as_base(self):
         return pack(self.as_data, codec=Encoding.Base85, encoder='json')[1:]
 
@@ -807,11 +807,11 @@ class URL(dataclass):
     query    : str = ''
     fragment : str = ''
 
-    @Property.Class.Cached
+    @pin.cls
     def subclass(cls):
         return required('yarl.URL')
 
-    @Property.Class.Cached
+    @pin.cls
     def default_ports(cls):
         return {
             'http'  : 80,
@@ -870,7 +870,7 @@ class URL(dataclass):
 
         raise TypeError(f'{Who(cls)} unknown input: {Who.Is(config)}')
 
-    @Property.Cached
+    @pin
     def as_dict(self):
         return {
             'scheme'   : self.scheme,
@@ -882,7 +882,7 @@ class URL(dataclass):
             'query'    : self.query,
             'fragment' : self.fragment}
 
-    @Property.Cached
+    @pin
     def url(self):
         return self.subclass.build(**self.as_dict)
 

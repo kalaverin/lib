@@ -166,6 +166,9 @@ def subclass(obj, types):
     cls = class_of(obj)
 
     if origin := get_origin(types):
+        if cls is origin:
+            return True
+
         args = get_args(types)
 
         if args and (

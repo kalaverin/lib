@@ -19,6 +19,9 @@ class Missing(metaclass=Singleton):
     def __bool__(self):
         return False
 
+    def __eq__(cls, _):
+        return False
+
     def __repr__(self):
         return f'<{Who.Name(self)}>'
 

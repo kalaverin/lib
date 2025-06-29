@@ -2,10 +2,10 @@ from contextlib import suppress
 from math import log2
 from re import findall
 
-from kalib.descriptors import Property
+from kalib.descriptors import pin
 from kalib.functions import to_ascii
 from kalib.internals import Who, unique
-from kalib.misc import lazy_proxy_to
+from kalib.misc import proxy_to
 
 
 def generate_offsets(x):
@@ -35,7 +35,7 @@ def get_mime(data):
         return {'text': read(data), 'type': detect_from(data).mime_type}
 
 
-@lazy_proxy_to(
+@proxy_to(
     'string',
     '__add__', '__contains__', '__eq__', '__format__', '__hash__', '__ge__',
     '__getitem__', '__gt__', '__iter__', '__le__', '__len__', '__lt__', '__mod__',
@@ -47,7 +47,7 @@ def get_mime(data):
     'partition', 'removeprefix', 'removesuffix', 'replace', 'rfind', 'rindex',
     'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith',
     'strip', 'swapcase', 'title', 'translate', 'upper', 'zfill',
-    Property.Cached, pre=replace_class_with_str,
+    pin, pre=replace_class_with_str,
 )
 class Str:
     """A class for handling bytes | str objects.
@@ -92,30 +92,30 @@ class Str:
         self._object = something
         self._encoding = encoding or self.INTERNAL_CHARSET
 
-    @Property.Cached
+    @pin
     def representation(self):
         return self.uncast(self._object)
 
-    @Property.Cached
+    @pin
     def mime(self):
         with suppress(ImportError):
             return get_mime(self.bytes)
 
-    @Property.Cached
+    @pin
     def chardet(self):
         from kalib.importer import required
         with suppress(Exception):
             func = required('charset_normalizer.detect')
             return func(bytes(self))
 
-    @Property.Cached
+    @pin
     def charset_probe_order(self):
         result = [self._encoding]
         if meta := self.chardet:
             result.append(meta['encoding'])
         return tuple(unique([*result, 'ascii']))
 
-    @Property.Cached
+    @pin
     def charset(self):
         string = self.representation
         is_bytes = isinstance(string, bytes)
@@ -159,7 +159,7 @@ class Str:
 
         return default if is_bytes else self.charset_probe
 
-    @Property.Cached
+    @pin
     def charset_probe(self):
         string = self.representation
 
@@ -179,12 +179,12 @@ class Str:
             except (UnicodeEncodeError, UnicodeDecodeError):
                 ...
 
-    @Property.Cached
+    @pin
     def bytes(self):
         string = self.representation
         return string if isinstance(string, bytes) else string.encode(self._encoding)
 
-    @Property.Cached
+    @pin
     def string(self):
         string = self.representation
         if isinstance(string, str):

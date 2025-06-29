@@ -20,17 +20,13 @@ from typing import ClassVar
 from weakref import ref
 
 from kalib.classes import Nothing
-from kalib.descriptors import Property, cache
+from kalib.descriptors import cache, class_property, pin
 from kalib.functions import to_bytes
 from kalib.internals import (
+    Is,
     Who,
     class_of,
     get_module_from_path,
-    is_callable,
-    is_class,  # noqa: F401
-    is_function,
-    is_imported_module,
-    is_iterable,
     stackoffset,
     stacktrace,
     trim_module_path,
@@ -166,34 +162,34 @@ class Logger(BaseLogger):
 
     #
 
-    @Property.Class.Parent
+    @pin.cls.here
     def Args(cls):  # noqa: N802
         return Logging.Args
 
-    @Property.Class.Parent
+    @pin.cls.here
     def Call(cls):  # noqa: N802
         return Logging.Call
 
-    @Property.Class.Parent
+    @pin.cls.here
     def Catch(cls):  # noqa: N802
         return Logging.Catch
 
-    @Property.Class.Parent
+    @pin.cls.here
     def Intercept(cls):  # noqa: N802
         return Logging.Intercept
 
-    @Property.Class.Parent
+    @pin.cls.here
     def Inject(cls):  # noqa: N802
         return Logging.Inject
 
     #
 
-    @Property.Class.Parent
+    @pin.cls.here
     def digest(cls):
         from kalib.importer import optional
         return optional('xxhash.xxh32_hexdigest', default=lambda x: md5(x).digest())  # noqa: S324
 
-    @Property.Class.Parent
+    @pin.cls.here
     def getter(cls):
         func = syslog.getLogger
         if func.__name__ != 'getLogger':
@@ -223,11 +219,11 @@ class Logger(BaseLogger):
         self._shift = kw.pop('shift', 0)
         super().__init__(*args, **kw)
 
-    @Property.Class.Parent
+    @pin.cls.here
     def _already_logged(cls):
         return defaultdict(OrderedDict)
 
-    @Property.Class.Parent
+    @pin.cls.here
     def levels(cls):
         """Return levels dictionary."""
 
@@ -249,7 +245,7 @@ class Logger(BaseLogger):
 
             wrapper.__name__ = name
             wrapper.__qualname__ = qname
-            return Property.Cached(wrapper)
+            return pin(wrapper)
 
         syslog.setLoggerClass(cls)
         for value, name in CUSTOM_LEVELS.items():
@@ -281,7 +277,7 @@ class Logger(BaseLogger):
 
         return dict(levels)
 
-    @Property.Cached
+    @pin
     def by_level(self):
         """Return method by level."""
 
@@ -366,7 +362,7 @@ class Logger(BaseLogger):
         skip = [__file__]
         if isinstance(var.skip, bytes | str):
             skip.append(var.skip)
-        elif is_iterable(var.skip):
+        elif Is.iterable(var.skip):
             skip.extend(var.skip)
 
         trace = var.trace
@@ -454,16 +450,16 @@ class Logger(BaseLogger):
 
 class Logging:
 
-    @Property.Class.Cached
+    @pin.cls
     def Mixin(klass):  # noqa: N802
 
         class Mixin:
 
-            @Property.Class.Cached
+            @pin.cls
             def log(cls):
                 return klass.get(cls)
 
-            @Property.Class.Cached
+            @pin.cls
             def logger(cls):
                 log = cls.log
                 log.deprecate(f'-> {Who(cls)}.log', shift=-5, stack=5)
@@ -568,7 +564,7 @@ class Logging:
         template = f' ({{:0.{precise:d}f}}s)'
         around = lambda x: int(x * power)  # noqa: E731
 
-        if is_function(level) or class_of(level) is classmethod:
+        if Is.function(level) or class_of(level) is classmethod:
             func, level = level, None
             return method_wrapper(func)
 
@@ -634,7 +630,7 @@ class Logging:
         if (
             not kw and not modified
             and len(exceptions) == 1
-            and is_callable(exceptions[0])
+            and Is.callable(exceptions[0])
         ):
             func = exceptions[0]
             exceptions = (Exception,)
@@ -702,7 +698,7 @@ class Logging:
         if Path(argv[0]).absolute() == Path(path).absolute():
             return cls.get(Path(path).stem, **kw)
 
-    @Property.Class
+    @class_property
     def Default(cls):  # noqa: N802
         """Return default logger for current module."""
 
@@ -721,13 +717,13 @@ class Logging:
 
         return cls.get('<unknown>')
 
-    @Property.Class.Parent
+    @pin.cls.here
     def config(cls):
         """Return logging configuration object."""
         import logging.config as config  # noqa: PLR0402
         return config
 
-    @Property.Class.Parent
+    @pin.cls.here
     def Force(cls):  # noqa: N802
         """Force logging to be enabled."""
 
@@ -746,7 +742,7 @@ class Logging:
             cls.log.verbose(f'={force} ({LOGGING_FORCE=})', stack=-1)
         return force
 
-    @Property.Class.Parent
+    @pin.cls.here
     def Debugging(cls):  # noqa: N802
         """Force debugging to be enabled."""
 
@@ -759,7 +755,7 @@ class Logging:
 
         return result or False
 
-    @Property.Class.Parent
+    @pin.cls.here
     def config_path(cls):
         """Return path to logging configuration file."""
 
@@ -770,7 +766,7 @@ class Logging:
             return str(path)
         return getenv('LOGGING_CONFIG', None)
 
-    @Property.Class.Cached
+    @pin.cls
     def directories_from_callstack(cls):
         """Return directories from callstack."""
 
@@ -923,7 +919,7 @@ class Logging:
             logger.setLevel(level)
         return logger
 
-    @Property.Class.Parent
+    @pin.cls.here
     def log(cls):
         """Logger for itself"""
 
@@ -967,7 +963,7 @@ class Logging:
         cls.configured_files.extend(order)
         return logger
 
-    @Property.Class.Parent
+    @pin.cls.here
     def logger(cls):
         """Compatibility for default .logger behavior"""
 
@@ -1007,7 +1003,7 @@ def injector(func, *args, **kw):  # noqa: ARG001
 
         args = (stack()[2].function,)
 
-    if not is_imported_module(args[0]):
+    if not Is.imported(args[0]):
         name = args[0]
         logger.debug(
             f'incorrect module log name: must be full module path, not {name=}',

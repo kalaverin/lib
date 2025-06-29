@@ -3,7 +3,7 @@ from functools import wraps
 from typing import ClassVar
 
 from kalib.importer import required
-from kalib.internals import Who, is_module
+from kalib.internals import Is, Who
 from kalib.loggers import Logging
 
 
@@ -27,7 +27,7 @@ class Monkey(Logging.Mixin):
         if isinstance(module, tuple):
             node, name = module
 
-        elif is_module(module):
+        elif Is.module(module):
             node, name = module, new.__name__
 
         else:

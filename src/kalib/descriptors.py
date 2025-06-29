@@ -8,13 +8,11 @@ from kalib.classes import Nothing
 from kalib.internals import (
     Is,
     Who,
-    class_of,
     get_attr,
     get_owner,
-    is_class,
 )
 
-__all__ = 'Property', 'cache'
+__all__ = 'cache', 'class_property', 'mixed_property', 'pin'
 
 
 def cache(limit=None):
@@ -44,12 +42,12 @@ def call_descriptor(descriptor):
     if func is Nothing:
         head = f'expected descriptor derived from {Who(BaseProperty)}'
 
-        if class_of(descriptor) is not cached_property:
+        if Is.classOf(descriptor) is not cached_property:
             raise TypeError(f'{head}, but got {Who(descriptor)} instead')
 
         raise TypeError(
             f'{head}, but got {Who(descriptor)}, may be you use '
-            f'@Property.Bind instead @Property.Cached?')
+            f'@pin.native instead @pin?')
 
     return func
 
@@ -60,8 +58,8 @@ def parent_call(func):
     def parent_caller(node, *args, **kw):
         try:
             desc = get_attr(
-                class_of(node), func.__name__, exclude_self=True,
-                index=func.__name__ not in class_of(node).__dict__)
+                Is.classOf(node), func.__name__, exclude_self=True,
+                index=func.__name__ not in Is.classOf(node).__dict__)
             return func(node, call_descriptor(desc)(node, *args, **kw), *args, **kw)
 
         except RecursionError as e:
@@ -92,7 +90,7 @@ def invokation_context_check(func):
         klass = self.klass
         if (
             klass is not None and
-            (node is None or klass != is_class(node))
+            (node is None or klass != Is.Class(node))
         ):
             msg = (
                 f'{Who(func)} exception, '
@@ -143,7 +141,7 @@ class BaseProperty:
         if node is None:
             mode = 'mixed' if self.klass is None else 'undefined'
         else:
-            mode = ('instance', 'class')[is_class(node)]
+            mode = ('instance', 'class')[Is.Class(node)]
 
         return f'{self.header} with {mode} ({Who(node, addr=True)}) call'
 
@@ -188,42 +186,52 @@ class InheritedClass(BaseProperty):
         return node
 
     @classmethod
-    def make_from(cls, klass):
+    def make_from(cls, parent):
         """Make child-aware class from plain parent-based."""
 
-        name = Who(klass, full=False)
+        name = Who(parent, full=False)
         suffix = f'{"_" if name == name.lower() else ""}inherited'.capitalize()
-        return type(f'{name}{suffix}', (cls, klass), {})
+
+        result = type(f'{name}{suffix}', (cls, parent), {})
+        result.here = parent
+        return result
 
 
 class Cached(BaseProperty):
 
     @classmethod
-    def expired_by(cls, callback):
-        # result = partial(cls, expired=callback)
-        # result.func = callback
-        return partial(cls, expired=callback)
+    def by(cls, callback):
+        return partial(cls, is_actual=callback)
+
+    expired_by = by
 
     @classmethod
     def ttl(cls, expire: float):
         if not isinstance(expire, float | int):
-            raise TypeError(f'expire must be float or int, not {Who.Is(expire)}')
+            raise TypeError(f'expire must be float or int, not {Who.Cast(expire)}')
 
         if expire <= 0:
             raise ValueError(f'expire must be positive number, not {expire!r}')
 
-        def is_fresh(node, value=Nothing):  # noqa: ARG001
+        def is_actual(self, node, value=Nothing):  # noqa: ARG001
             return (value + expire > time()) if value else time()
 
-        return cls.expired_by(is_fresh)
+        return cls.by(is_actual)
 
-    def __init__(self, function, expired=None):
+    def __init__(self, function, is_actual=Nothing):
         super().__init__(function)
-        self.expired = expired
+
+        if method := getattr(Is.classOf(self), 'is_actual', None):
+            if is_actual:
+                raise TypeError(
+                    f'{Who.Is(self)}.is_actual method ({Who.Cast(method)}) '
+                    f"can't override by is_actual kw: {Who.Cast(is_actual)}")
+            is_actual = method
+        self.is_actual = is_actual
 
     @invokation_context_check
     def get_cache(self, node):
-        name = f'__{("instance", "class")[is_class(node)]}_memoized__'
+        name = f'__{("instance", "class")[Is.Class(node)]}_memoized__'
 
         if hasattr(node, '__dict__'):
             with suppress(KeyError):
@@ -236,14 +244,14 @@ class Cached(BaseProperty):
     @invokation_context_check
     def call(self, obj):
         node = self.get_node(obj)
-
         with suppress(KeyError):
 
-            if not self.expired:
-                return self.get_cache(node)[self.name]
+            stored = self.get_cache(node)[self.name]
+            if not self.is_actual:
+                return stored
 
-            value, stamp = self.get_cache(node)[self.name]
-            if self.expired(node, stamp) is not False:
+            value, stamp = stored
+            if self.is_actual(self, node, stamp) is True:
                 return value
 
         return self.__set__(node, super().call(obj))
@@ -251,10 +259,11 @@ class Cached(BaseProperty):
     @invokation_context_check
     def __set__(self, node, value):
         cache = self.get_cache(node)
-        if not self.expired:
+
+        if not self.is_actual:
             cache[self.name] = value
         else:
-            cache[self.name] = value, self.expired(node)
+            cache[self.name] = value, self.is_actual(self, node)
         return value
 
     @invokation_context_check
@@ -269,7 +278,7 @@ class ClassProperty(BaseProperty):
 
     @invokation_context_check
     def get_node(self, node):
-        return get_owner(node, self.name) if is_class(node) else node
+        return get_owner(node, self.name) if Is.Class(node) else node
 
 
 class MixedProperty(ClassProperty):
@@ -303,62 +312,16 @@ class PostCachedProperty(MixedProperty, Cached):
             return value
         return super().__set__(node, value)
 
-
-class Property(BaseProperty):
-    """
-    The Property class is a versatile descriptor used for managing attributes in a class.
-    It includes various types of properties for both instances and classes.
-    """
-
-    """Replaces the data-descriptor with a calculated result,
-    supporting asynchronous operations."""
-    Cached = Cached
-
-    """Just replaces the getter with a calculated result for simple cases."""
-    Bind = cached_property
-
-    """Passes the class as the first positional argument."""
-    Class = ClassProperty
-
-    """Passes the original class where the decorator is used, then replaces its
-    own data-descriptor with a calculated result in the original parent."""
-    Class.Parent = ClassCachedProperty
-
-    """Passes the inherited class and sets the child class attribute
-    with a calculated result."""
-    Class.Cached = InheritedClass.make_from(ClassCachedProperty)
-
-    """Can be used with either a class or an instance."""
-    Mixed = MixedProperty
-
-    """Replaces the data-descriptor with a calculated result for instances, but when
-    used in a class context, passes the class and just returns the result."""
-    Mixed.Cached = InheritedClass.make_from(MixedCachedProperty)
-
-    Any = MixedProperty
-    Any.Pre    = PreCachedProperty
-    Any.Post   = PostCachedProperty
-    Any.Cached = InheritedClass.make_from(PostCachedProperty)
-    Any.Pre.Parent  = InheritedClass.make_from(PreCachedProperty)
-    Any.Post.Parent = InheritedClass.make_from(PostCachedProperty)
-
-    @classmethod
-    def Custom(cls, callback):  # noqa: N802
-        result = Cached.expired_by(callback)
-        result.Class = cls.Class.Cached.expired_by(callback)
-        return result
-
-
-# obsolete interface
+#
 
 class pin(Cached):  # noqa: N801
 
-    attr = Property.Bind
+    native = cached_property
+    cls = InheritedClass.make_from(ClassCachedProperty)
+    any = InheritedClass.make_from(MixedCachedProperty)
+    pre = InheritedClass.make_from(PreCachedProperty)
+    post = InheritedClass.make_from(PostCachedProperty)
 
-    # class-descriptor, but .root uses class what have
-    # declared pin.root, instead last child
-    root = Property.Class.Parent
-    cls  = Property.Class.Cached
 
-    # mixed-descriptor, do not cache when using in class context, but bind instead
-    any  = Property.Mixed.Cached
+class class_property(ClassProperty): ...
+class mixed_property(MixedProperty): ...

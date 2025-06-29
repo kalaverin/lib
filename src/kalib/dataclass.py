@@ -19,17 +19,12 @@ from typing import (
 
 from kalib.classes import Nothing
 from kalib.datastructures import json, loads
-from kalib.descriptors import Property, cache
+from kalib.descriptors import cache, pin
 from kalib.importer import optional, required, sort
 from kalib.internals import (
     Is,
     Who,
-    class_of,
     get_owner,
-    is_callable,
-    is_class,
-    is_collection,
-    is_iterable,
     iter_inheritance,
     unique,
 )
@@ -111,7 +106,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
     policy = Policy.Strict
 
-    @Property.Class.Cached
+    @pin.cls
     def __fields__(cls):
         def make(x):
             if get_origin(x.type) in (Generic, Union, UnionType):
@@ -122,9 +117,9 @@ class dataclass(Logging.Mixin):  # noqa: N801
             factory = x.default_factory
             required = (
                 {_MISSING_TYPE} ==
-                set(map(class_of, (x.default, factory))))
+                set(map(Is.classOf, (x.default, factory))))
 
-            klass = class_of(x.default)
+            klass = Is.classOf(x.default)
             return FieldDescriptions(
                 name     = x.name,
                 type     = x.type,
@@ -141,11 +136,11 @@ class dataclass(Logging.Mixin):  # noqa: N801
             cls.__dataclass_fields__.values())
         return tuple(map(make, result))
 
-    @Property.Class.Cached
+    @pin.cls
     def __fields_dict__(cls):
         fields = {f.name: f for f in cls.__fields__}
         if not Is.subclass(cls, dataclass):
-            parents = class_of(cls).__mro__
+            parents = Is.classOf(cls).__mro__
             msg = f'{Who(cls)} must be a dataclass, {parents=}'
             raise ConfigurationTypeError(msg)
 
@@ -163,10 +158,10 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
         return fields
 
-    @Property.Class.Cached
+    @pin.cls
     def __mro_classes__(cls):
         result = []
-        logging = class_of(Logging.Mixin).__name__
+        logging = Is.classOf(Logging.Mixin).__name__
         skip = {BaseAutoClass, DataClassFlexible, Logging.Mixin, dataclass}
 
         for c in iter_inheritance(cls, exclude_stdlib=False):
@@ -211,7 +206,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
                 try:
                     if (
-                        class_of(field.type) not in (UnionType, _UnionGenericAlias)
+                        Is.classOf(field.type) not in (UnionType, _UnionGenericAlias)
                         and Is.subclass(field.type, dataclass)
                         and isinstance(data[key], dataclass | dict)
                     ):
@@ -285,7 +280,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
     @classmethod
     def load(cls, data, *args, **kw):
-        if isinstance(data, cls) and class_of(data) is cls:
+        if isinstance(data, cls) and Is.classOf(data) is cls:
             return data.copy(**kw)
 
         fields = cls.__fields_dict__
@@ -342,19 +337,19 @@ class dataclass(Logging.Mixin):  # noqa: N801
     def extra_kwargs(self):
         return dict(self.__dict__['__non_model_items__'])
 
-    @Property.Class.Cached
+    @pin.cls
     def Defaults(cls):  # noqa: N802
         return {k: v.default for k, v in cls.__fields_dict__.items()}
 
-    @Property.Mixed
+    @pin.any
     def as_dict(self) -> dict:
-        return dict(self.__fields_dict__ if is_class(self) else self)
+        return dict(self.__fields_dict__ if Is.Class(self) else self)
 
-    @Property.Cached
+    @pin
     def as_json(self) -> str:
         return json.dumps(self.as_dict)
 
-    @Property.Cached
+    @pin
     def as_sql(self) -> dict:
         def sql_cast(key, value):
 
@@ -388,9 +383,9 @@ class dataclass(Logging.Mixin):  # noqa: N801
     def to_sql(self, glue=',', /, callback=None):
         return glue.join(
             f'{k}={v}' for k, v in self.as_sql.items()
-            if not is_callable(callback) or callback(v))
+            if not Is.callable(callback) or callback(v))
 
-    @Property.Cached
+    @pin
     def export(self):
         return self.as_dict | self.extra_kwargs
 
@@ -409,7 +404,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
             yield key, value
 
-    @Property.Cached
+    @pin
     def fields(self):
         return tuple(map(itemgetter(0), self))
 
@@ -426,7 +421,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                 k: v for k, v in self.export.items()
                 if k in other and v == other[k]}, name=Who(other, full=False))
 
-        elif is_collection(other):
+        elif Is.collection(other):
             ...
 
         elif isinstance(other, str):
@@ -478,7 +473,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                 k: v for k, v in self.export.items()
                 if k not in other or v == other[k]})
 
-        elif is_collection(other):
+        elif Is.collection(other):
             ...
 
         elif isinstance(other, str):
@@ -520,7 +515,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
         return self.__or__(other)
 
-    @Property.Cached
+    @pin
     def is_valid(self):
         result = {}
         fields = self.__fields_dict__
@@ -567,7 +562,7 @@ class BaseAutoClass(Logging.Mixin):
             if klass is get_owner(klass, '__field__') and klass.__field__:
                 yield klass
 
-    @Property.Class.Parent
+    @pin.cls.here
     def __autoclasses__(cls):
         return frozenset(map(attrgetter('__field__'), cls.__autoclasses_fields__()))
 
@@ -585,7 +580,7 @@ def make_auto(field):
 
             if (
                 (owner := get_owner(BaseAutoClass, Field))
-                and owner is get_owner(class_of(self), Field)
+                and owner is get_owner(Is.classOf(self), Field)
             ):
                 self.log.warning(
                     f"{Who(self)}.{Field}{sourcefile(self, '(in %s)')} "
@@ -594,7 +589,7 @@ def make_auto(field):
 
             if (
                 (owner := get_owner(BaseAutoClass, field))
-                and owner != get_owner(class_of(self), field)
+                and owner != get_owner(Is.classOf(self), field)
             ):
                 self.log.warning(
                     f'{Who(self)}.{field} property overrided', once=True)
@@ -677,8 +672,8 @@ def make_auto(field):
     model.__qualname__ = f'{autoclass.__qualname__}.{Field}'
     fill_model.__qualname__ = f'{autoclass.__qualname__}.{field}'
 
-    setattr(autoclass, Field, Property.Class.Cached(model))
-    setattr(autoclass, field, Property.Cached(fill_model))
+    setattr(autoclass, Field, pin.cls(model))
+    setattr(autoclass, field, pin(fill_model))
 
     return autoclass
 
@@ -691,7 +686,7 @@ def autoclass(*args):
 
 def simple(classname, *names, **kw):
     mro = kw.pop('mro', None) or ()
-    if not is_iterable(mro):
+    if not Is.iterable(mro):
         mro = [mro]
     mro = [*list(mro), BaseAutoClass, dataclass]
 
@@ -753,7 +748,7 @@ def from_tuple(*fields, **kw):
 
     def wrapper(*args, **kwlocal):
 
-        if len(args) == 1 and is_collection(args):
+        if len(args) == 1 and Is.collection(args):
             args = args[0]
 
         if len(args) != len(fields):

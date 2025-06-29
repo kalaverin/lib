@@ -13,11 +13,8 @@ from kalib.descriptors import cache
 from kalib.functions import to_ascii, to_bytes
 from kalib.importer import optional, required, sort
 from kalib.internals import (
+    Is,
     Who,
-    class_of,
-    is_collection,
-    is_function,
-    is_mapping,
     sourcefile,
 )
 from kalib.loggers import Logging
@@ -93,7 +90,7 @@ def default_serializer(obj, throw=True):
         return {f'<{type(obj).__name__}>': obj._asdict()}
 
     with suppress(KeyError):
-        result = serializers[class_of(obj)](obj)
+        result = serializers[Is.classOf(obj)](obj)
         if result is not Nothing:
             return result
 
@@ -112,7 +109,7 @@ def default_serializer(obj, throw=True):
 
 def serializer(*classes):
 
-    direct_call = len(classes) == 2 and is_function(classes[1])  # noqa: PLR2004
+    direct_call = len(classes) == 2 and Is.function(classes[1])  # noqa: PLR2004
 
     def name(obj):
         return f'{Who(obj, addr=True)} ({sourcefile(obj)})'
@@ -209,7 +206,7 @@ def try_json(data, /, **kw):
 @Monkey.bind(json)
 def cast(obj):
 
-    if is_mapping(obj):
+    if Is.mapping(obj):
         return {k: cast(v) for k, v in obj.items()}
 
     elif isinstance(obj, tuple) and hasattr(obj, '_fields'):  # namedtuple
@@ -218,7 +215,7 @@ def cast(obj):
     elif isinstance(obj, deque | list | tuple | set):
         return list(map(cast, obj))
 
-    elif is_collection(obj):
+    elif Is.collection(obj):
         msg = f"couldn't serialize {Who.Is(obj)}"
         raise TypeError(msg)
 
@@ -357,7 +354,7 @@ def namedtuple_builder(*fields, name=None):
     return namedtuple(name or 'Tuple', fields)
 
 
-def to_namedtuple(*args, **kw):
+def Tuple(*args, **kw):
     name = kw.pop('name', None)
     rename = kw.pop('rename', False)
     sort_keys = kw.pop('sort_keys', True)
@@ -366,7 +363,7 @@ def to_namedtuple(*args, **kw):
         return make_namedtuple(args[0], name, rename, sort_keys)
 
     elif (
-        not args and kw  # this is to_namedtuple(**data) style
+        not args and kw  # this is Tuple(**data) style
     ):
         if name is None and rename is False and sort_keys is True:
             return make_namedtuple(kw, name, rename, sort_keys)
@@ -381,10 +378,10 @@ def to_namedtuple(*args, **kw):
         fields.sort()
 
         raise TypeError(
-            'to_namedtuple() used with **kw style but kw contains '
-            f'to_namedtuple{fields} reserved keys')
+            'Tuple() used with **kw style but kw contains '
+            f'Tuple{fields} reserved keys')
 
-    raise TypeError(f'to_namedtuple({args=}, {kw=})')
+    raise TypeError(f'Tuple({args=}, {kw=})')
 
 
 def make_namedtuple(data, name, rename, sort_keys):

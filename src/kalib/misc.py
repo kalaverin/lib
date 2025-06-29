@@ -10,15 +10,9 @@ from sys import stderr, stdin, stdout, version_info
 from time import monotonic, time
 
 from kalib.classes import Missing
-from kalib.descriptors import Property, cache
+from kalib.descriptors import cache, pin
 from kalib.functions import to_bytes
-from kalib.internals import (
-    Who,
-    class_of,
-    get_attr,
-    is_class,
-    is_iterable,
-)
+from kalib.internals import Is, Who, get_attr
 from kalib.internals import sourcefile as generic_sourcefile
 
 Nothing = Missing()
@@ -82,11 +76,11 @@ def stamp(**kw):
 class Timer:
     """Context manager to measure time spent in block."""
 
-    @Property.Class
+    @class_property
     def now(cls):
         return time()
 
-    @Property.Class
+    @class_property
     def stamp(cls):
         return stamp()
 
@@ -105,7 +99,7 @@ class Timer:
         return monotonic() - self._start if self._start else 0.0
 
 
-def lazy_proxy_to(  # noqa: PLR0915
+def proxy_to(  # noqa: PLR0915
     *mapping,
     getter  = attrgetter,
     default = Nothing,
@@ -113,7 +107,7 @@ def lazy_proxy_to(  # noqa: PLR0915
     safe    = True,
 ):
     if isinstance(mapping[-1], str):
-        bind = Property.Cached
+        bind = pin
 
     elif mapping[-1] is None:
         bind, mapping = None, mapping[:-1]
@@ -131,7 +125,7 @@ def lazy_proxy_to(  # noqa: PLR0915
 
         pivot, mapping_list = mapping[0], mapping[1:]
 
-        if not is_class(cls):
+        if not Is.Class(cls):
             msg = f"{Who.Is(cls)} isn't a class"
             raise TypeError(msg)
 
@@ -192,7 +186,7 @@ def lazy_proxy_to(  # noqa: PLR0915
                             f"('{method}' not in {Who(node)}.{pivot}): {Who.Is(entity)}")
 
                         if default is Nothing:
-                            raise class_of(e)(msg) from e
+                            raise Is.classOf(e)(msg) from e
 
                         msg = f'{msg}; return {Who.Is(default)}'
                         cls.log.verbose(msg)
@@ -234,7 +228,7 @@ def sourcefile(something, template=None):
 
 
 def to_tuple(x):
-    return tuple(x or ()) if is_iterable(x) else (x,)
+    return tuple(x or ()) if Is.iterable(x) else (x,)
 
 
 def toml_read(path):
