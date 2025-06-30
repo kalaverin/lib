@@ -90,9 +90,8 @@ def invokation_context_check(func):
 
     @wraps(func)
     def context(self, node, *args, **kw):
-        klass = self.klass
         if (
-            klass is not None and
+            (klass := self.klass) is not None and
             (node is None or klass != Is.Class(node))
         ):
             msg = (
@@ -140,12 +139,10 @@ class BaseProperty:
             return f'{self.title}({Who(self.function)})'
 
     def header_with_context(self, node):
-
         if node is None:
             mode = 'mixed' if self.klass is None else 'undefined'
         else:
             mode = ('instance', 'class')[Is.Class(node)]
-
         return f'{self.header} with {mode} ({Who(node, addr=True)}) call'
 
     @invokation_context_check
@@ -156,7 +153,9 @@ class BaseProperty:
     def call(self, node):
         try:
             value = self.function(node)
-            return ensure_future(value) if iscoroutinefunction(self.function) else value
+            if not iscoroutinefunction(self.function):
+                return value
+            return ensure_future(value)
 
         except AttributeError as e:
             from kalib.exceptions import exception
