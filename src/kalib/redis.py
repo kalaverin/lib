@@ -1,16 +1,28 @@
+from contextlib import suppress, contextmanager
 from time import sleep, time
 
+from kalib import exception
 from kalib.dataclass import dataclass
 from kalib.descriptors import cache, pin
 
 try:
+    import redis.exceptions
     from redis import Redis
     from redis.client import PubSub
     from redis.connection import ConnectionPool
     from redis_lock import RedisLock
 
 except ImportError:
-    raise ImportError('redis_lock is required, install kalib[redis]')
+    raise ImportError('redis & redis_lock is required, install kalib[redis]')
+
+
+Recoverable = (
+    ConnectionRefusedError,
+    TimeoutError,
+    redis.exceptions.BusyLoadingError,
+    redis.exceptions.ClusterDownError,
+    redis.exceptions.TimeoutError,
+    redis.exceptions.TryAgainError)
 
 
 class Pool(dataclass.config):
@@ -35,7 +47,6 @@ class Pool(dataclass.config):
     def DefaultPool(cls):  # noqa: N802
         return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
 
-
 class Event(Pool):
 
     def __init__(
@@ -45,6 +56,7 @@ class Event(Pool):
         client  = None,
         poll    = 1.0,
         blocked = True,
+        robust  = True,
         timeout = None,
         signal  = None,
         ttl     = None,
@@ -55,30 +67,48 @@ class Event(Pool):
         self._poll    = poll
         self._signal  = signal
         self._timeout = timeout
+        self._robust  = robust
         self._value   = self.value if blocked else -1
-
-    @pin.native
-    def client(self):
-        return self._client or self.DefaultPool
-
-    @pin.native
-    def condition(self):
-        return self._signal or (lambda: 1)
 
     #
 
+    def __enter__(self):
+        client = self._client or self.DefaultPool
+        while self._robust:
+            try:
+                if client.ping():
+                    break
+
+            except Recoverable as e:
+                self.log.warning(f'{self.name}: {exception(e).reason}')
+
+            sleep(self._poll)
+            continue
+        return client
+
+    def __exit__(self, *_, **__): ...
+
     def up(self, ttl: int = 0) -> int:
-        result = self.client.incr(self.name)
-        if ttl := int(self._ttl or ttl):
-            self.client.expire(self.name, ttl)
+        with self as cli:
+            result = cli.incr(self.name)
+            if ttl := int(self._ttl or ttl):
+                cli.expire(self.name, ttl)
         return result
 
     def drop(self) -> int:
-        return self.client.delete(self.name)
+        with self as cli:
+            return cli.delete(self.name)
 
     @property
     def value(self) -> int:
-        return int(self.client.get(self.name) or 0)
+        with self as cli:
+            return int(cli.get(self.name) or 0)
+
+    #
+
+    @pin.instead
+    def condition(self):
+        return self._signal or (lambda: 1)
 
     @property
     def on(self):
@@ -128,6 +158,7 @@ class Event(Pool):
                 if wait < 0:
                     return infinite
 
+            print(1)
             sleep(wait)
             counter += 1
 
@@ -170,7 +201,7 @@ class Lock(RedisLock):
         self._timeout = timeout or 86400 * 365 * 10
         super().__init__(connector, name, blocking_timeout=self._timeout)
 
-    @pin.native
+    @pin.instead
     def condition(self):
         return self._signal or (lambda: 1)
 
