@@ -15,6 +15,12 @@ from kalib.internals import (
 __all__ = 'cache', 'class_property', 'mixed_property', 'pin'
 
 
+class PropertyError(Exception): ...
+class ContextFaultError(PropertyError): ...
+class ReadOnlyError(PropertyError): ...
+class AttributeException(PropertyError): ...  # noqa: N818
+
+
 def cache(limit=None):
 
     function = partial(lru_cache, maxsize=None, typed=False)
@@ -74,18 +80,6 @@ def parent_call(func):
     return parent_caller
 
 
-class PropertyError(Exception):
-    ...
-
-
-class ContextFaultError(PropertyError):
-    ...
-
-
-class AttributeException(PropertyError):  # noqa: N818
-    ...
-
-
 def invokation_context_check(func):
 
     @wraps(func)
@@ -106,11 +100,7 @@ def invokation_context_check(func):
     return context
 
 
-class BaseProperty:
-
-    klass = False
-    readonly = False
-
+class AbstractProperty:
     def __init__(self, function):
         self.function = function
 
@@ -118,18 +108,9 @@ class BaseProperty:
     def name(self):
         return self.function.__name__
 
-    @cached_property
-    def is_data(self):
-        return bool(hasattr(self, '__set__') or hasattr(self, '__delete__'))
-
-    @cached_property
+    @property
     def title(self):
-        mode = 'mixed' if self.klass is None else ('instance', 'class')[self.klass]
-
-        prefix = ('', 'data ')[self.is_data]
-        return (
-            f'{mode} {prefix}descriptor '
-            f'{Who(self, addr=True)}'.strip())
+        raise NotImplementedError
 
     @cached_property
     def header(self):
@@ -139,11 +120,69 @@ class BaseProperty:
             return f'{self.title}({Who(self.function)})'
 
     def header_with_context(self, node):
+        raise NotImplementedError
+
+
+class InsteadProperty(AbstractProperty):
+    def __init__(self, function):
+        if iscoroutinefunction(function):
+            raise TypeError(
+                f'{Who(function)} is coroutine function, '
+                'you must use @pin instead of @pin.instead')
+        super().__init__(function)
+
+    @cached_property
+    def title(self):
+        return f'instance just-replace-descriptor {Who(self, addr=True)}'
+
+    def header_with_context(self, node):
+        return (
+            f'{self.header} called with '
+            f'{("instance", "class")[Is.Class(node)]} '
+            f'({Who(node, addr=True)})')
+
+    def __get__(self, node, klass):
+        if node is None:
+            raise ContextFaultError(self.header_with_context(klass))
+
+        with suppress(KeyError):
+            return node.__dict__[self.name]
+
+        value = self.function(node)
+        node.__dict__[self.name] = value
+        return value
+
+    def __delete__(self, node):
+        raise ReadOnlyError(f'{self.header_with_context(node)}: deleter called')
+
+
+class BaseProperty(AbstractProperty):
+
+    klass = False
+    readonly = False
+
+    @InsteadProperty
+    def is_data(self):
+        return bool(hasattr(self, '__set__') or hasattr(self, '__delete__'))
+
+    @InsteadProperty
+    def title(self):
+        mode = 'mixed' if self.klass is None else ('instance', 'class')[self.klass]
+
+        prefix = ('', 'data ')[self.is_data]
+        return (
+            f'{mode} {prefix}descriptor '
+            f'{Who(self, addr=True)}'.strip())
+
+    def header_with_context(self, node):
         if node is None:
             mode = 'mixed' if self.klass is None else 'undefined'
         else:
             mode = ('instance', 'class')[Is.Class(node)]
-        return f'{self.header} with {mode} ({Who(node, addr=True)}) call'
+        return (
+            f'{self.header} with {mode} type called with'
+            f'{("instance", "class")[Is.Class(node)]} '
+            f'({Who(node, addr=True)})')
 
     @invokation_context_check
     def get_node(self, node):
@@ -300,6 +339,7 @@ class MixedCachedProperty(MixedProperty, Cached):
 
 
 class PreCachedProperty(MixedProperty, Cached):
+
     @invokation_context_check
     def __set__(self, node, value):
         if not Is.Class(node):
@@ -308,6 +348,7 @@ class PreCachedProperty(MixedProperty, Cached):
 
 
 class PostCachedProperty(MixedProperty, Cached):
+
     @invokation_context_check
     def __set__(self, node, value):
         if Is.Class(node):
@@ -319,6 +360,8 @@ class PostCachedProperty(MixedProperty, Cached):
 class pin(Cached):  # noqa: N801
 
     native = cached_property
+    instead = InsteadProperty
+
     cls = InheritedClass.make_from(ClassCachedProperty)
     any = InheritedClass.make_from(MixedCachedProperty)
     pre = InheritedClass.make_from(PreCachedProperty)
