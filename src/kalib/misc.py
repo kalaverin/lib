@@ -319,3 +319,40 @@ def fasthash(path, algo='xxhash.xxh128'):
 def is_python_runtime():
     """Checks if current runtime is Python, not Nuitka or PyInstaller."""
     return Path(sys.executable).is_file()
+
+
+#
+
+def repr_value(x):
+    if (
+        x is True or
+        x is False or
+        x is None
+    ) or isinstance(x, str):
+        return x
+
+    elif isinstance(x, int | float):
+        return repr(x)
+
+    return Who.Cast(x)
+
+
+def args_kwargs(*args, **kw):
+    """Return formatted arguments."""
+
+    def format_args(x):
+        return repr(tuple(map(repr_value, x)))[1:-1].rstrip(',')
+
+    def format_kwargs(x):
+        return ', '.join(f'{k}={repr_value(v)}' for k, v in x.items())
+
+    if args and kw:
+        return f'{format_args(args)}, {format_kwargs(kw)}'
+
+    elif args:
+        return format_args(args)
+
+    elif kw:
+        return format_kwargs(kw)
+
+    return ''

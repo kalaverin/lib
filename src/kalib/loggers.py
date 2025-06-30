@@ -20,6 +20,7 @@ from typing import ClassVar
 from weakref import ref
 
 from kalib.classes import Nothing
+from kalib.misc import args_kwargs, repr_value
 from kalib.descriptors import cache, class_property, pin
 from kalib.functions import to_bytes
 from kalib.internals import (
@@ -109,18 +110,8 @@ def extract_options_from_kwargs(func=None, /, **fields):
     return wrapper
 
 
-def repr_value(x):
-    if (
-        x is True or
-        x is False or
-        x is None
-    ):
-        return x
 
-    elif isinstance(x, str | int | float):
-        return repr(x)
 
-    return Who.Is(x)
 
 
 class NumericOrSetter:
@@ -481,24 +472,7 @@ class Logging:
 
     @classmethod
     def Args(cls, *args, **kw):  # noqa: N802
-        """Return formatted arguments."""
-
-        def format_args(x):
-            return repr(tuple(map(repr_value, x)))[1:-1].rstrip(',')
-
-        def format_kwargs(x):
-            return ', '.join(f'{k}={repr_value(v)}' for k, v in x.items())
-
-        if args and kw:
-            return f'{format_args(args)}, {format_kwargs(kw)}'
-
-        elif args:
-            return format_args(args)
-
-        elif kw:
-            return format_kwargs(kw)
-
-        return ''
+        return args_kwargs(*args, **kw)
 
     @classmethod
     def Call(cls, level=None):  # noqa: N802
