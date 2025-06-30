@@ -42,19 +42,13 @@ def is_collection(obj):
         isinstance(obj, Collection) and
         isinstance(obj, Sequence) and
         not isinstance(obj, bytes | str)
-    ) or is_mapping(obj)
+    ) or is_mapping(obj) or all(map(
+        partial(hasattr, obj),
+        ('__getitem__', '__setitem__', '__delitem__')))
 
 
 def is_mapping(obj):
-    if isinstance(obj, Mapping):
-        return True
-
-    if issubclass(class_of(obj), dict):
-        return True
-
-    return all(map(
-        partial(hasattr, obj),
-        ('__getitem__', '__setitem__', '__delitem__')))
+    return isinstance(obj, Mapping) or issubclass(class_of(obj), dict)
 
 
 def is_iterable(obj):
