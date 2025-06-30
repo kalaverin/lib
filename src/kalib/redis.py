@@ -1,4 +1,3 @@
-from contextlib import suppress, contextmanager
 from time import sleep, time
 
 from kalib import exception
