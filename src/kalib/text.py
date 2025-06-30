@@ -92,30 +92,30 @@ class Str:
         self._object = something
         self._encoding = encoding or self.INTERNAL_CHARSET
 
-    @pin.instead
+    @pin
     def representation(self):
         return self.uncast(self._object)
 
-    @pin.instead
+    @pin
     def mime(self):
         with suppress(ImportError):
             return get_mime(self.bytes)
 
-    @pin.instead
+    @pin
     def chardet(self):
         from kalib.importer import required
         with suppress(Exception):
             func = required('charset_normalizer.detect')
             return func(bytes(self))
 
-    @pin.instead
+    @pin
     def charset_probe_order(self):
         result = [self._encoding]
         if meta := self.chardet:
             result.append(meta['encoding'])
         return tuple(unique([*result, 'ascii']))
 
-    @pin.instead
+    @pin
     def charset(self):
         string = self.representation
         is_bytes = isinstance(string, bytes)
@@ -159,7 +159,7 @@ class Str:
 
         return default if is_bytes else self.charset_probe
 
-    @pin.instead
+    @pin
     def charset_probe(self):
         string = self.representation
 
@@ -179,12 +179,12 @@ class Str:
             except (UnicodeEncodeError, UnicodeDecodeError):
                 ...
 
-    @pin.instead
+    @pin
     def bytes(self):
         string = self.representation
         return string if isinstance(string, bytes) else string.encode(self._encoding)
 
-    @pin.instead
+    @pin
     def string(self):
         string = self.representation
         if isinstance(string, str):

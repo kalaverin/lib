@@ -106,7 +106,7 @@ class Event(Pool):
 
     #
 
-    @pin.instead
+    @pin
     def condition(self):
         return self._signal or (lambda: 1)
 
@@ -158,7 +158,6 @@ class Event(Pool):
                 if wait < 0:
                     return infinite
 
-            print(1)
             sleep(wait)
             counter += 1
 
@@ -201,7 +200,7 @@ class Lock(RedisLock):
         self._timeout = timeout or 86400 * 365 * 10
         super().__init__(connector, name, blocking_timeout=self._timeout)
 
-    @pin.instead
+    @pin
     def condition(self):
         return self._signal or (lambda: 1)
 

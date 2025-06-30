@@ -64,7 +64,7 @@ def build_enumerate(name, *order):
         raise ValueError(msg)
 
     class Special(dict):
-        @pin.instead
+        @pin
         def _member_names(self):
             return tuple(filter(lambda x: not x.startswith('_'), self))
 
@@ -183,7 +183,7 @@ class HTTPResponse(Logging.Mixin):
         self._raw = response
         self._content = content
 
-    @pin.instead
+    @pin
     def _headers(self):
         result = defaultdict(list)
         for key, value in self._raw.headers.items():
@@ -191,7 +191,7 @@ class HTTPResponse(Logging.Mixin):
         return {
             k: tuple(v) if len(v) > 1 else v[0] for k, v in result.items()}
 
-    @pin.instead
+    @pin
     def _response_params(self):
         return {
             'url'     : self._raw.url,
@@ -199,25 +199,25 @@ class HTTPResponse(Logging.Mixin):
             'headers' : self._headers,
             'content' : self._content}
 
-    @pin.instead
+    @pin
     def _response(self):
         return ResponseInternals.load(self._response_params)
 
-    @pin.instead
+    @pin
     def ok(self):
         return not self.exception.not_ok
 
     # just mapping to common internal structure
 
-    @pin.instead
+    @pin
     def url(self):
         return str(self._response.url)
 
-    @pin.instead
+    @pin
     def status(self):
         return int(self._response.status)
 
-    @pin.instead
+    @pin
     def reason(self):
         if (
             (reason := self._response.reason)
@@ -228,23 +228,23 @@ class HTTPResponse(Logging.Mixin):
         reason = HTTPException.Statuses[self.status]
         return f'{reason.description} ({reason.phrase})'
 
-    @pin.instead
+    @pin
     def headers(self):
         return self._response.headers
 
-    @pin.instead
+    @pin
     def headerstring(self):
         return json.repr(self.headers)
 
-    @pin.instead
+    @pin
     def content(self):
         return self._response.content
 
-    @pin.instead
+    @pin
     def exception(self):
         return HTTPException.by_code(self.status)
 
-    @pin.instead
+    @pin
     def mime(self):
         msg = (
             f"could't detect mime-type for {self.url!r} response: "
@@ -271,31 +271,31 @@ class HTTPResponse(Logging.Mixin):
 
     # content related properties
 
-    @pin.instead
+    @pin
     def bytes(self):
         return Str.to_bytes(self.content)
 
-    @pin.instead
+    @pin
     def text(self):
         return Str.to_str(self.content)
 
-    @pin.instead
+    @pin
     def feed(self):
         return required('feedparser.parse')(self.content)
 
-    @pin.instead
+    @pin
     def json(self):
         return json.loads(self.content)
 
-    @pin.instead
+    @pin
     def html(self):
         return required('lxml.html.document_fromstring')(self.content)
 
-    @pin.instead
+    @pin
     def pack(self):
         return required('msgpack.loads')(self.content, encoding='utf-8', use_list=False)
 
-    @pin.instead
+    @pin
     def xml(self):
         return required('lxml.etree').fromstring(self.content)
 
@@ -326,7 +326,7 @@ class HTTPResponse(Logging.Mixin):
         'text/plain'            : 'text',
     }
 
-    @pin.instead
+    @pin
     def content_type(self):
         def getter(x):
             with suppress(KeyError):
@@ -336,7 +336,7 @@ class HTTPResponse(Logging.Mixin):
             if (content_type := getter(header)):
                 return content_type
 
-    @pin.instead
+    @pin
     def data(self):
 
         @cache
@@ -401,7 +401,7 @@ class HTTPxResponse(HTTPResponse):
         return HTTPException.catch(
             cls(response, content=response.content), **kw)
 
-    @pin.instead
+    @pin
     def _response_params(self):
         return {
             'url'     : self._raw.url,
@@ -426,14 +426,14 @@ class FileResponse(HTTPResponse):
             raise ValueError(f"can't get url from {headers=}")
         return HTTPException.catch(self, **kw)
 
-    @pin.instead
+    @pin
     def _headers(self):
         headers = dict(self._raw)
         del headers['status']
         del headers['url']
         return headers
 
-    @pin.instead
+    @pin
     def _response_params(self):
         headers = dict(self._raw)
         return {
@@ -444,7 +444,7 @@ class FileResponse(HTTPResponse):
             'reason'  : None,
         }
 
-    @pin.instead
+    @pin
     def content(self):
         with self._content.open('rb') as fd:
             return fd.read()
@@ -593,7 +593,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
 
         return response
 
-    @pin.instead
+    @pin
     def args(self):
         return (
             self.response.url,
@@ -603,7 +603,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
             self.response.mime.as_dict if self.response.mime else {},
         )
 
-    @pin.instead
+    @pin
     def verbose(self):
         response = self.response
 
@@ -637,7 +637,7 @@ class Agent:
         self._kw = kw
         kw.setdefault('platforms', ('desktop'))
 
-    @pin.instead
+    @pin
     def generator(self):
         return required('fake_useragent.UserAgent')(**self._kw)
 
@@ -748,7 +748,7 @@ class Cookies:
 
         yield from self.iterstrings(lines)
 
-    @pin.instead
+    @pin
     def cookies(self):
         def iter_tokens():
             for line in self.iterraw():
@@ -774,23 +774,23 @@ class Cookies:
 
         return result
 
-    @pin.instead
+    @pin
     def as_data(self):
         return tuple(sort(i.OutputString() for i in self.cookies.values()))
 
-    @pin.instead
+    @pin
     def as_dict(self):
         return {i.key: i.value for i in self.values()}
 
-    @pin.instead
+    @pin
     def as_json(self):
         return json.dumps(self.as_data)
 
-    @pin.instead
+    @pin
     def as_text(self):
         return '\n'.join(self.as_data)
 
-    @pin.instead
+    @pin
     def as_base(self):
         return pack(self.as_data, codec=Encoding.Base85, encoder='json')[1:]
 
@@ -875,7 +875,7 @@ class URL(dataclass):
 
         raise TypeError(f'{Who(cls)} unknown input: {Who.Is(config)}')
 
-    @pin.instead
+    @pin
     def as_dict(self):
         return {
             'scheme'   : self.scheme,
@@ -887,7 +887,7 @@ class URL(dataclass):
             'query'    : self.query,
             'fragment' : self.fragment}
 
-    @pin.instead
+    @pin
     def url(self):
         return self.subclass.build(**self.as_dict)
 

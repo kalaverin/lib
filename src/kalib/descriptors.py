@@ -56,7 +56,7 @@ def call_descriptor(descriptor):
 
         raise TypeError(
             f'{head}, but got {Who(descriptor)}, may be you use '
-            f'@pin.native instead @pin?')
+            f'simple @pin instead @pin.natuve?')
 
     return func
 
@@ -123,12 +123,35 @@ class AbstractProperty:
         raise NotImplementedError
 
 
-class InsteadProperty(AbstractProperty):
+class CustomCallbackMixin:
+    @classmethod
+    def by(cls, callback):
+        if not Is.subclass(cls, Cached):
+            cls = Cached
+        return partial(cls, is_actual=callback)
+
+    expired_by = by
+
+    @classmethod
+    def ttl(cls, expire: float):
+        if not isinstance(expire, float | int):
+            raise TypeError(f'expire must be float or int, not {Who.Cast(expire)}')
+
+        if expire <= 0:
+            raise ValueError(f'expire must be positive number, not {expire!r}')
+
+        def is_actual(self, node, value=Nothing):  # noqa: ARG001
+            return (value + expire > time()) if value else time()
+
+        return cls.by(is_actual)
+
+
+class InsteadProperty(AbstractProperty, CustomCallbackMixin):
     def __init__(self, function):
         if iscoroutinefunction(function):
             raise TypeError(
                 f'{Who(function)} is coroutine function, '
-                'you must use @pin instead of @pin.instead')
+                'you must use @pin.native instead of just @pin')
         super().__init__(function)
 
     @cached_property
@@ -238,26 +261,7 @@ class InheritedClass(BaseProperty):
         return result
 
 
-class Cached(BaseProperty):
-
-    @classmethod
-    def by(cls, callback):
-        return partial(cls, is_actual=callback)
-
-    expired_by = by
-
-    @classmethod
-    def ttl(cls, expire: float):
-        if not isinstance(expire, float | int):
-            raise TypeError(f'expire must be float or int, not {Who.Cast(expire)}')
-
-        if expire <= 0:
-            raise ValueError(f'expire must be positive number, not {expire!r}')
-
-        def is_actual(self, node, value=Nothing):  # noqa: ARG001
-            return (value + expire > time()) if value else time()
-
-        return cls.by(is_actual)
+class Cached(BaseProperty, CustomCallbackMixin):
 
     def __init__(self, function, is_actual=Nothing):
         super().__init__(function)
@@ -357,11 +361,9 @@ class PostCachedProperty(MixedProperty, Cached):
 
 #
 
-class pin(Cached):  # noqa: N801
+class pin(InsteadProperty):  # noqa: N801
 
-    native = cached_property
-    instead = InsteadProperty
-
+    native = Cached
     cls = InheritedClass.make_from(ClassCachedProperty)
     any = InheritedClass.make_from(MixedCachedProperty)
     pre = InheritedClass.make_from(PreCachedProperty)
