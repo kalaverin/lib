@@ -1,57 +1,53 @@
-from collections import namedtuple
-from datetime import date, datetime
+from contextlib import suppress
 from traceback import format_exception
+from typing import NamedTuple
 
-from kalib.datastructures import json
+from kalib.datastructures import json, serializer
 from kalib.internals import Who
 from kalib.text import Str
 
 
-class ExceptionInformation(namedtuple('Exception', 'arguments message reason trace')):
-    __slots__ = ()
+class Error(NamedTuple):
+    type      : str
+    arguments : tuple | None
+    message   : str | None
+    reason    : str
+    trace     : tuple | None
 
     @property
     def as_dict(self):
         return self._asdict()
 
 
+@serializer(Error)
+def from_error(error):
+    return error._asdict()
+
+
 def exception(e):
     def trim(x):
         return tuple(i.rstrip() for i in x)
 
-    def select_primitives_only(e):
-        if (args := getattr(e, 'args', None)):
-            result = []
-            for item in args:
-                if not item:
-                    continue
+    arguments = None
+    if (args := getattr(e, 'args', None)):
+        result = []
+        for item in args:
+            with suppress(Exception):
+                result.append(str(json.cast(item, throw=True)))
+                continue
 
-                # TODO: replace with datastructures.cast
+            with suppress(Exception):
+                result.append(Who.Cast(item))
+                continue
 
-                if isinstance(item, list | set):
-                    item = tuple(item)  # noqa: PLW2901
+            with suppress(Exception):
+                result.append(repr(item))
+                continue
+        arguments = tuple(result)
 
-                elif isinstance(item, date | datetime):
-                    item = item.isoformat()  # noqa: PLW2901
-
-                elif isinstance(item, bytes | float | int | str | tuple):
-                    ...
-
-                else:
-                    try:
-                        item = json.dumps(item)  # noqa: PLW2901
-                    except Exception:  # noqa: S112, BLE001
-                        continue
-
-                result.append(item)
-
-            if result:
-                return json.dumps(result)
-
-    arguments = select_primitives_only(e)
-    message = Str(e).strip() or None
-
-    return ExceptionInformation(
-        arguments, message,
-        f'{Who(e)}({arguments}) {message or ""}',
-        '\n'.join(trim(format_exception(e))))
+    return Error(
+        Who(e),
+        arguments,
+        Str(e).strip() or None,
+        f'{Who(e)}({json.repr(arguments)[1:-1]})',
+        trim(format_exception(e)) or None)
