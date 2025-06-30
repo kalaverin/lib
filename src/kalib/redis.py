@@ -46,33 +46,35 @@ class Pool(dataclass.config):
     def DefaultPool(cls):  # noqa: N802
         return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
 
-class Event(Pool):
-
     def __init__(
         self,
-        name,
         /,
         client  = None,
         poll    = 1.0,
-        blocked = True,
         robust  = True,
-        timeout = None,
         signal  = None,
-        ttl     = None,
     ):
-        self.name = name
-        self._ttl     = ttl
         self._client  = client
         self._poll    = poll
         self._signal  = signal
-        self._timeout = timeout
         self._robust  = robust
-        self._value   = self.value if blocked else -1
+
+    @pin
+    def pool(self):
+        return self._client or self.DefaultPool
+
+    @pin
+    def condition(self):
+        return self._signal or (lambda: True)
+
+    @property
+    def on(self):
+        return self.condition()
 
     #
 
     def __enter__(self):
-        client = self._client or self.DefaultPool
+        client = self.pool
         while self._robust:
             try:
                 if client.ping():
@@ -86,6 +88,26 @@ class Event(Pool):
         return client
 
     def __exit__(self, *_, **__): ...
+
+
+class Event(Pool):
+
+    def __init__(
+        self,
+        name,
+        /,
+        blocked = True,
+        timeout = None,
+        ttl     = None,
+        **kw,
+    ):
+        super().__init__(**kw)
+        self.name = name
+        self._ttl     = ttl
+        self._timeout = timeout
+        self._value   = self.integer if blocked else -1
+
+    #
 
     def up(self, ttl: int = 0) -> int:
         with self as cli:
@@ -101,24 +123,20 @@ class Event(Pool):
     @property
     def value(self) -> int:
         with self as cli:
-            return int(cli.get(self.name) or 0)
+            return cli.get(self.name)
+
+    @property
+    def integer(self) -> int:
+        return int(self.value or 0)
 
     #
 
-    @pin
-    def condition(self):
-        return self._signal or (lambda: 1)
-
-    @property
-    def on(self):
-        return self.condition()
-
     @property
     def updated(self):
-        return self._value != self.value
+        return self._value != self.integer
 
     def down(self):
-        self._value = self.value
+        self._value = self.integer
 
     #
 
@@ -137,7 +155,7 @@ class Event(Pool):
 
         condition = self.on
         while condition:
-            value = self.value
+            value = self.integer
 
             if not value:
                 self._value = value
@@ -166,7 +184,7 @@ class Event(Pool):
         wait = self._poll
 
         while self.on:
-            if self.value:
+            if self.integer:
                 delta = time() - start
                 if counter:
                     self.log.debug(f'{self.name} ({delta:0.2f}s)')
