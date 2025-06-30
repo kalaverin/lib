@@ -38,6 +38,9 @@ def call_descriptor(descriptor):
     if Is.subclass(descriptor, BaseProperty):
         return descriptor.call
 
+    if func := getattr(descriptor, 'func', Nothing):
+        return func
+
     func = getattr(descriptor, 'fget', Nothing)
     if func is Nothing:
         head = f'expected descriptor derived from {Who(BaseProperty)}'

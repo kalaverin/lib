@@ -10,7 +10,7 @@ from sys import stderr, stdin, stdout, version_info
 from time import monotonic, time
 
 from kalib.classes import Missing
-from kalib.descriptors import cache, pin
+from kalib.descriptors import cache, class_property, pin
 from kalib.functions import to_bytes
 from kalib.internals import Is, Who, get_attr
 from kalib.internals import sourcefile as generic_sourcefile

@@ -64,7 +64,7 @@ def build_enumerate(name, *order):
         raise ValueError(msg)
 
     class Special(dict):
-        @pin
+        @pin.native
         def _member_names(self):
             return tuple(filter(lambda x: not x.startswith('_'), self))
 
@@ -183,7 +183,7 @@ class HTTPResponse(Logging.Mixin):
         self._raw = response
         self._content = content
 
-    @pin
+    @pin.native
     def _headers(self):
         result = defaultdict(list)
         for key, value in self._raw.headers.items():
@@ -191,7 +191,7 @@ class HTTPResponse(Logging.Mixin):
         return {
             k: tuple(v) if len(v) > 1 else v[0] for k, v in result.items()}
 
-    @pin
+    @pin.native
     def _response_params(self):
         return {
             'url'     : self._raw.url,
@@ -199,49 +199,52 @@ class HTTPResponse(Logging.Mixin):
             'headers' : self._headers,
             'content' : self._content}
 
-    @pin
+    @pin.native
     def _response(self):
         return ResponseInternals.load(self._response_params)
 
-    @pin
+    @pin.native
     def ok(self):
         return not self.exception.not_ok
 
     # just mapping to common internal structure
 
-    @pin
+    @pin.native
     def url(self):
         return str(self._response.url)
 
-    @pin
+    @pin.native
     def status(self):
         return int(self._response.status)
 
-    @pin
+    @pin.native
     def reason(self):
-        if (reason := self._response.reason):
+        if (
+            (reason := self._response.reason)
+            and reason != '<none>'
+        ):
             return reason
 
         reason = HTTPException.Statuses[self.status]
-        return f'{reason.phrase}: {reason.description}'
+        return f'{reason.description} ({reason.phrase})'
 
-    @pin
+    @pin.native
     def headers(self):
         return self._response.headers
 
-    @pin
+    @pin.native
     def headerstring(self):
         return json.repr(self.headers)
 
-    @pin
+    @pin.native
     def content(self):
         return self._response.content
 
-    @pin
+    @pin.native
     def exception(self):
         return HTTPException.by_code(self.status)
 
-    @pin
+    @pin.native
     def mime(self):
         msg = (
             f"could't detect mime-type for {self.url!r} response: "
@@ -268,31 +271,31 @@ class HTTPResponse(Logging.Mixin):
 
     # content related properties
 
-    @pin
+    @pin.native
     def bytes(self):
         return Str.to_bytes(self.content)
 
-    @pin
+    @pin.native
     def text(self):
         return Str.to_str(self.content)
 
-    @pin
+    @pin.native
     def feed(self):
         return required('feedparser.parse')(self.content)
 
-    @pin
+    @pin.native
     def json(self):
         return json.loads(self.content)
 
-    @pin
+    @pin.native
     def html(self):
         return required('lxml.html.document_fromstring')(self.content)
 
-    @pin
+    @pin.native
     def pack(self):
         return required('msgpack.loads')(self.content, encoding='utf-8', use_list=False)
 
-    @pin
+    @pin.native
     def xml(self):
         return required('lxml.etree').fromstring(self.content)
 
@@ -323,7 +326,7 @@ class HTTPResponse(Logging.Mixin):
         'text/plain'            : 'text',
     }
 
-    @pin
+    @pin.native
     def content_type(self):
         def getter(x):
             with suppress(KeyError):
@@ -333,7 +336,7 @@ class HTTPResponse(Logging.Mixin):
             if (content_type := getter(header)):
                 return content_type
 
-    @pin
+    @pin.native
     def data(self):
 
         @cache
@@ -398,7 +401,7 @@ class HTTPxResponse(HTTPResponse):
         return HTTPException.catch(
             cls(response, content=response.content), **kw)
 
-    @pin
+    @pin.native
     def _response_params(self):
         return {
             'url'     : self._raw.url,
@@ -423,14 +426,14 @@ class FileResponse(HTTPResponse):
             raise ValueError(f"can't get url from {headers=}")
         return HTTPException.catch(self, **kw)
 
-    @pin
+    @pin.native
     def _headers(self):
         headers = dict(self._raw)
         del headers['status']
         del headers['url']
         return headers
 
-    @pin
+    @pin.native
     def _response_params(self):
         headers = dict(self._raw)
         return {
@@ -441,7 +444,7 @@ class FileResponse(HTTPResponse):
             'reason'  : None,
         }
 
-    @pin
+    @pin.native
     def content(self):
         with self._content.open('rb') as fd:
             return fd.read()
@@ -590,7 +593,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
 
         return response
 
-    @pin
+    @pin.native
     def args(self):
         return (
             self.response.url,
@@ -600,7 +603,7 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
             self.response.mime.as_dict if self.response.mime else {},
         )
 
-    @pin
+    @pin.native
     def verbose(self):
         response = self.response
 
@@ -619,7 +622,9 @@ class HTTPException(Exception, Logging.Mixin):  # noqa: N818
             raise
 
     def __str__(self):
-        return f'{self.response.status:d} {self.response.reason}'
+        return (
+            f'{self.response.status:d} {self.response.reason} '
+            f'{self.response.url}')
 
 
 class HTTPUnknownStatusError(HTTPException):
@@ -632,7 +637,7 @@ class Agent:
         self._kw = kw
         kw.setdefault('platforms', ('desktop'))
 
-    @pin
+    @pin.native
     def generator(self):
         return required('fake_useragent.UserAgent')(**self._kw)
 
@@ -743,7 +748,7 @@ class Cookies:
 
         yield from self.iterstrings(lines)
 
-    @pin
+    @pin.native
     def cookies(self):
         def iter_tokens():
             for line in self.iterraw():
@@ -769,23 +774,23 @@ class Cookies:
 
         return result
 
-    @pin
+    @pin.native
     def as_data(self):
         return tuple(sort(i.OutputString() for i in self.cookies.values()))
 
-    @pin
+    @pin.native
     def as_dict(self):
         return {i.key: i.value for i in self.values()}
 
-    @pin
+    @pin.native
     def as_json(self):
         return json.dumps(self.as_data)
 
-    @pin
+    @pin.native
     def as_text(self):
         return '\n'.join(self.as_data)
 
-    @pin
+    @pin.native
     def as_base(self):
         return pack(self.as_data, codec=Encoding.Base85, encoder='json')[1:]
 
@@ -870,7 +875,7 @@ class URL(dataclass):
 
         raise TypeError(f'{Who(cls)} unknown input: {Who.Is(config)}')
 
-    @pin
+    @pin.native
     def as_dict(self):
         return {
             'scheme'   : self.scheme,
@@ -882,7 +887,7 @@ class URL(dataclass):
             'query'    : self.query,
             'fragment' : self.fragment}
 
-    @pin
+    @pin.native
     def url(self):
         return self.subclass.build(**self.as_dict)
 
