@@ -45,9 +45,13 @@ def exception(e):
                 continue
         arguments = tuple(result)
 
+    reason = f'{Who(e)}({json.repr(arguments)[1:-1]})'
+    if message := hasattr(e, 'message', '').strip():
+        reason = f'{reason}: {message}'
+
     return Error(
         Who(e),
         arguments,
         Str(e).strip() or None,
-        f'{Who(e)}({json.repr(arguments)[1:-1]})',
+        reason,
         trim(format_exception(e)) or None)
