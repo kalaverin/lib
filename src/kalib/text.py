@@ -77,8 +77,8 @@ class Str:
         if isinstance(something, Exception):
             return f'{Who(something)}: {something}'
 
-        msg = f"({Who(something)}) {something=} isn't valid bytes | str"
-        raise TypeError(msg)
+        raise TypeError(
+            f"{Who(cls)} input must be bytes | str, got {Who.Cast(something)}")
 
     @classmethod
     def to_bytes(cls, something, *args, **kw):
@@ -92,30 +92,30 @@ class Str:
         self._object = something
         self._encoding = encoding or self.INTERNAL_CHARSET
 
-    @pin
+    @pin.native
     def representation(self):
         return self.uncast(self._object)
 
-    @pin
+    @pin.native
     def mime(self):
         with suppress(ImportError):
             return get_mime(self.bytes)
 
-    @pin
+    @pin.native
     def chardet(self):
         from kalib.importer import required
         with suppress(Exception):
             func = required('charset_normalizer.detect')
             return func(bytes(self))
 
-    @pin
+    @pin.native
     def charset_probe_order(self):
         result = [self._encoding]
         if meta := self.chardet:
             result.append(meta['encoding'])
         return tuple(unique([*result, 'ascii']))
 
-    @pin
+    @pin.native
     def charset(self):
         string = self.representation
         is_bytes = isinstance(string, bytes)
@@ -159,7 +159,7 @@ class Str:
 
         return default if is_bytes else self.charset_probe
 
-    @pin
+    @pin.native
     def charset_probe(self):
         string = self.representation
 
@@ -179,12 +179,12 @@ class Str:
             except (UnicodeEncodeError, UnicodeDecodeError):
                 ...
 
-    @pin
+    @pin.native
     def bytes(self):
         string = self.representation
         return string if isinstance(string, bytes) else string.encode(self._encoding)
 
-    @pin
+    @pin.native
     def string(self):
         string = self.representation
         if isinstance(string, str):
