@@ -2,6 +2,7 @@ import base64
 from binascii import Error
 from collections import deque, namedtuple
 from contextlib import suppress
+from datetime import date, datetime
 from keyword import kwlist
 from pickle import UnpicklingError
 from pickle import dumps as generic_dumps
@@ -10,6 +11,7 @@ from typing import ClassVar
 
 from kalib.classes import Nothing
 from kalib.descriptors import cache
+from kalib.misc import args_kwargs, repr_value
 from kalib.functions import to_ascii, to_bytes
 from kalib.importer import optional, required, sort
 from kalib.internals import (
@@ -26,6 +28,7 @@ DEADBEEF = b'\xDE\xAD\xBE\xEF'
 
 serializers = {}
 logger = Logging.get(__name__)
+Dict = dict | optional('immutabledict.immutabledict', default=dict)
 
 
 try:
@@ -83,11 +86,15 @@ def default_serializer(obj, throw=True):
     if obj is Nothing:
         return None
 
+    if isinstance(obj, date | datetime):
+        # flow for non-orjson setup, intercept for stdlib json.dumps
+        return obj.isoformat()  # noqa: PLW2901
+
     if (
         isinstance(obj, tuple) and
         type(obj).__mro__ == (type(obj), tuple, object)
     ):
-        return {f'<{type(obj).__name__}>': obj._asdict()}
+        return (f'<{Who(obj)}>', obj._asdict())
 
     with suppress(KeyError):
         result = serializers[Is.classOf(obj)](obj)
@@ -204,23 +211,24 @@ def try_json(data, /, **kw):
 
 
 @Monkey.bind(json)
-def cast(obj):
-
+def cast(obj, throw=False):
     if Is.mapping(obj):
-        return {k: cast(v) for k, v in obj.items()}
+        result = to_json({k: cast(v) for k, v in obj.items()})
 
     elif isinstance(obj, tuple) and hasattr(obj, '_fields'):  # namedtuple
-        return cast(obj._asdict())
+        result = to_json((f'<{Who(obj)}>', obj._asdict()))
 
-    elif isinstance(obj, deque | list | tuple | set):
-        return list(map(cast, obj))
+    elif isinstance(obj, deque | list | set | tuple):
+        result = to_json(list(map(cast, obj)))
 
     elif Is.collection(obj):
-        msg = f"couldn't serialize {Who.Is(obj)}"
+        msg = f"couldn't serialize {Who.Cast(obj)}"
         raise TypeError(msg)
 
-    result = default_serializer(obj, throw=False)
-    return obj if result is Nothing else result
+    else:
+        result = to_json(obj)
+
+    return json.loads(result)
 
 
 class Encoding:
@@ -359,13 +367,19 @@ def Tuple(*args, **kw):
     rename = kw.pop('rename', False)
     sort_keys = kw.pop('sort_keys', True)
 
-    if len(args) == 1 and not kw:
+    if not name and kw and len(args) == 1 and isinstance(args[0], str):
+        # Tuple('MyTuple', **kw)
+        return make_namedtuple(kw, args[0], rename, sort_keys)
+
+    if not kw and len(args) == 1:
+        # Tuple(namedtuple) or Tuple(dict, **kw)
         return make_namedtuple(args[0], name, rename, sort_keys)
 
     elif (
         not args and kw  # this is Tuple(**data) style
     ):
         if name is None and rename is False and sort_keys is True:
+            # Tuple(**data)
             return make_namedtuple(kw, name, rename, sort_keys)
 
         fields = []
@@ -381,18 +395,19 @@ def Tuple(*args, **kw):
             'Tuple() used with **kw style but kw contains '
             f'Tuple{fields} reserved keys')
 
-    raise TypeError(f'Tuple({args=}, {kw=})')
+    raise TypeError(f'Tuple({args_kwargs(*args, **kw)})')
 
 
-def make_namedtuple(data, name, rename, sort_keys):
-
+def make_namedtuple(
+    data      : Dict | tuple,
+    name      : str | None,
+    rename    : bool,
+    sort_keys : bool
+):
     if isinstance(data, tuple) and hasattr(data, '_asdict'):
-        return data
+        return data  # collections.namedtuple itself
 
-    elif isinstance(data, optional('immutabledict.immutabledict', default=dict)):
-        ...
-
-    elif not isinstance(data, dict):
+    elif not isinstance(data, Dict):
         raise TypeError(f'expected dict, got {Who.Is(data)}')
 
     keys = tuple(sort(data) if sort_keys else data)
@@ -404,6 +419,7 @@ def make_namedtuple(data, name, rename, sort_keys):
 
     return namedtuple_builder(*fields, name=name)(*map(data.__getitem__, keys))
 
+#
 
 with suppress(ImportError):
     from pydantic import BaseModel
