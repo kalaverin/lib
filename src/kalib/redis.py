@@ -15,16 +15,15 @@ except ImportError:
     raise ImportError('redis & redis_lock is required, install kalib[redis]')
 
 
-Recoverable = (
-    ConnectionRefusedError,
-    TimeoutError,
-    redis.exceptions.BusyLoadingError,
-    redis.exceptions.ClusterDownError,
-    redis.exceptions.TimeoutError,
-    redis.exceptions.TryAgainError)
-
-
 class Pool(dataclass.config):
+
+    Recoverable = (
+        ConnectionRefusedError,
+        TimeoutError,
+        redis.exceptions.BusyLoadingError,
+        redis.exceptions.ClusterDownError,
+        redis.exceptions.TimeoutError,
+        redis.exceptions.TryAgainError)
 
     class PoolConfig(dataclass):
         host                     : str = 'localhost'
@@ -80,8 +79,8 @@ class Pool(dataclass.config):
                 if client.ping():
                     break
 
-            except Recoverable as e:
-                self.log.warning(f'{self.name}: {exception(e).reason}')
+            except self.Recoverable as e:
+                self.log.warning(f'{exception(e).reason}')
 
             sleep(self._poll)
             continue
