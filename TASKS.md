@@ -10,13 +10,13 @@ Runs all defined pre-commit hooks.
 
 ```bash
     uvx yamlfix --exclude '.venv/' .
-    uvx pre-commit run --config conf/pre-commit.yaml --color always --all
+    uvx pre-commit run --config etc/pre-commit.yaml --color always --all
 
     # uv run ruff check .
     # uv run black --check --diff .
 
     uv run -q vulture --min-confidence 66 'src/'
-    # uv run -q mypy --config-file conf/mypy.toml .
+    # uv run -q mypy --config-file etc/mypy.toml .
 
     # uv run -q bandit \
     #     --quiet \
@@ -43,7 +43,7 @@ Requires: venv
 Update all pre-commit hook versions to latest releases.
 
 ```bash
-    uvx pre-commit autoupdate --config conf/pre-commit.yaml --color always
+    uvx pre-commit autoupdate --config etc/pre-commit.yaml --color always
 
     uncommited="$(git diff --cached --name-only | sort -u | tr '\n' ' ' | xargs)"
     changes="$(git ls-files --deleted --modified --exclude-standard)"
@@ -132,7 +132,7 @@ Make virtualenv for project build & test tools, install pre-push hook.
         uv venv
         uv sync --all-extras
         uvx pre-commit install \
-            --config conf/pre-commit.yaml \
+            --config etc/pre-commit.yaml \
             --color always \
             --hook-type pre-push \
             --install-hooks \
@@ -152,7 +152,7 @@ Autoupdate pre-commit hooks if the last update was more than 7 days ago.
 ```bash
 
     ctime="$(date +%s)"
-    mtime="$(git log -1 --format=%ct conf/pre-commit.yaml)"
+    mtime="$(git log -1 --format=%ct etc/pre-commit.yaml)"
 
     result=$(((7*86400) - (ctime - mtime)))
 
@@ -302,11 +302,11 @@ After validating the readiness for an update, it prompts to proceed. Once confir
 
 Requires: venv
 
-Check and format conf/pre-commit.yaml. If any changes are made, it stages the file for the next commit.
+Check and format etc/pre-commit.yaml. If any changes are made, it stages the file for the next commit.
 
 ```bash
 
-    file="conf/pre-commit.yaml"
+    file="etc/pre-commit.yaml"
 
     uvx pre-commit run check-yaml --config "$file" --color always --file "$file" || value="$?"
 
@@ -346,11 +346,11 @@ Check and format pyproject.toml. If any changes are made, it stages the file for
 
     file="pyproject.toml"
 
-    uvx pre-commit run check-toml --config conf/pre-commit.yaml --color always --file "$file" || value="$?"
+    uvx pre-commit run check-toml --config etc/pre-commit.yaml --color always --file "$file" || value="$?"
 
     while true; do
         value="0"
-        uvx pre-commit run pretty-format-toml --config conf/pre-commit.yaml --color always --file "$file" || value="$?"
+        uvx pre-commit run pretty-format-toml --config etc/pre-commit.yaml --color always --file "$file" || value="$?"
 
         if [ "$value" -eq 0 ]; then
             break
