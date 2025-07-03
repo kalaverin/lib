@@ -10,6 +10,7 @@ build = [
 ]
 development = [
   "better-exceptions>=0.3.3",
+  "pipdeptree>=2.26.1"
 ]
 documentation = [
   "sphinx>=8.1.3",
