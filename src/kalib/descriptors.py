@@ -40,25 +40,30 @@ def cache(limit=None):
     return function(maxsize=limit) if limit else function()
 
 
-def call_descriptor(descriptor):
-    if Is.subclass(descriptor, BaseProperty):
-        return descriptor.call
+def extract_wrapped(desc):
+    # when it's default instance-method replacer
+    if Is.subclass(desc, InsteadProperty):
+        return desc.__get__
 
-    if func := getattr(descriptor, 'func', Nothing):
-        return func
+    # when it's full-featured (cached) property
+    if Is.subclass(desc, BaseProperty):
+        return desc.call
 
-    func = getattr(descriptor, 'fget', Nothing)
-    if func is Nothing:
-        head = f'expected descriptor derived from {Who(BaseProperty)}'
+    # when it's builtin @property
+    if Is.subclass(desc, property):
+        return desc.fget
 
-        if Is.classOf(descriptor) is not cached_property:
-            raise TypeError(f'{head}, but got {Who(descriptor)} instead')
+    # when wrapped functions stored in .func
+    if Is.subclass(desc, cached_property):
+        return desc.func
 
-        raise TypeError(
-            f'{head}, but got {Who(descriptor)}, may be you use '
-            f'simple @pin instead @pin.natuve?')
+    head = f'expected desc derived from {Who(AbstractProperty)}'
+    if Is.classOf(desc) is not cached_property:
+        raise TypeError(f'{head}, but got {Who(desc)} instead')
 
-    return func
+    raise TypeError(
+        f'{head}, but got {Who(desc)}, may be you use '
+        f'simple @pin instead @pin.natuve?')
 
 
 def parent_call(func):
@@ -69,7 +74,8 @@ def parent_call(func):
             desc = get_attr(
                 Is.classOf(node), func.__name__, exclude_self=True,
                 index=func.__name__ not in Is.classOf(node).__dict__)
-            return func(node, call_descriptor(desc)(node, *args, **kw), *args, **kw)
+
+            return func(node, extract_wrapped(desc)(node, *args, **kw), *args, **kw)
 
         except RecursionError as e:
             raise RecursionError(
@@ -101,6 +107,10 @@ def invokation_context_check(func):
 
 
 class AbstractProperty:
+    @classmethod
+    def with_parent(cls, function):
+        return cls(parent_call(function))
+
     def __init__(self, function):
         self.function = function
 
@@ -164,7 +174,7 @@ class InsteadProperty(AbstractProperty, CustomCallbackMixin):
             f'{("instance", "class")[Is.Class(node)]} '
             f'({Who(node, addr=True)})')
 
-    def __get__(self, node, klass):
+    def __get__(self, node, klass=Nothing):
         if node is None:
             raise ContextFaultError(self.header_with_context(klass))
 

@@ -46,7 +46,7 @@ def exception(e):
         arguments = tuple(result)
 
     reason = f'{Who(e)}({json.repr(arguments)[1:-1]})'
-    if message := hasattr(e, 'message', '').strip():
+    if message := getattr(e, 'message', '').strip():
         reason = f'{reason}: {message}'
 
     return Error(
