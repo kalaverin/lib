@@ -9,11 +9,20 @@ from pathlib import Path
 from re import split, sub
 from typing import ClassVar
 
+from kain import (
+    Is,
+    Who,
+    cache,
+    class_property,
+    optional,
+    parent_call,
+    pin,
+    required,
+    sort,
+)
+
 from kalib.dataclass import dataclass
 from kalib.datastructures import Encoding, json, loads, pack, serializer, unpack
-from kalib.descriptors import cache, class_property, parent_call, pin
-from kalib.importer import optional, required, sort
-from kalib.internals import Is, Who
 from kalib.loggers import Logging
 from kalib.misc import proxy_to
 from kalib.text import Str
@@ -111,7 +120,7 @@ Crawling = build_enumerate(
     (703, 'Still Processing', 'Resource temporary unavailable: video compressing, etc'),
     (704, 'Need Reparse', 'Resource unavailable: need to reparse'),
     (705, 'Restricted', 'Resource unavailable: under age banner'),
-    (706, 'Missing Data', 'Resource unavailable: missing fields, migration issues, etc'),
+    (706, 'Missing Data', 'Resource unavailable: missing fields, migration issues'),
     (707, 'Need Subscription', 'Resource unavailable: paywall, need account, etc'),
     (708, 'Regional Restrictions', 'Resource unavailable for current region'),
     (709, 'No Valid Source', 'Resource unavailable: no valid video format'),

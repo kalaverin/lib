@@ -2,18 +2,17 @@
 ci:
   autofix_prs: false
   autoupdate_commit_msg: pre-commit autoupdate
-  autoupdate_schedule: monthly
+
 
 default_language_version:
-  python: python3.10
+  python: python3.11
+
 
 fail_fast: false
+exclude: requirements.+
+
 
 repos:
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.22
-    hooks:
-      - id: mdformat
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -40,13 +39,13 @@ repos:
       - id: name-tests-test
         exclude: tests/(mocks|syspath).py
   - repo: https://github.com/sirosen/texthooks
-    rev: 0.6.8
+    rev: 0.7.1
     hooks:
       - id: fix-spaces
       - id: fix-ligatures
       - id: forbid-bidi-controls
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.14.0
+    rev: v2.15.0
     hooks:
       - id: pretty-format-ini
         args:
@@ -54,13 +53,6 @@ repos:
       - id: pretty-format-toml
         args:
           - --autofix
-  # - repo: https://github.com/lyz-code/yamlfix
-  #   rev: 1.17.0
-  #   hooks:
-  #     - id: yamlfix
-  #       args:
-  #         - --config-file
-  #         - etc/lint/yamlfix.yaml
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.37.1
     hooks:
@@ -116,7 +108,7 @@ repos:
       - id: python-check-blanket-noqa
       - id: python-check-blanket-type-ignore
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.13
+    rev: v0.12.7
     hooks:
       - id: ruff
         args:
@@ -125,6 +117,7 @@ repos:
     rev: 3.3.0
     hooks:
       - id: flakeheaven
+        exclude: \.yamllint
         args:
           - --config
           - etc/lint/flakeheaven.toml
@@ -161,9 +154,3 @@ repos:
   #         - --error-effort=36100
   #         - --error-volume=3100
   #         - --error-difficulty=12
-  # - repo: https://github.com/astral-sh/uv-pre-commit
-  #   rev: 0.7.12
-  #   hooks:
-  #     - id: uv-lock
-  #       args:
-  #         - --locked

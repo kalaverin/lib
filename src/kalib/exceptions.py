@@ -2,8 +2,9 @@ from contextlib import suppress
 from traceback import format_exception
 from typing import NamedTuple
 
+from kain import Who
+
 from kalib.datastructures import json, serializer
-from kalib.internals import Who
 from kalib.text import Str
 
 
@@ -15,7 +16,7 @@ class Error(NamedTuple):
     trace     : tuple | None
 
     @property
-    def as_dict(self):
+    def as_dict(self):  # typing: ignore[flake8-typing-imports]
         return self._asdict()
 
 
@@ -42,7 +43,7 @@ def exception(e):
 
             with suppress(Exception):
                 result.append(repr(item))
-                continue
+
         arguments = tuple(result)
 
     reason = f'{Who(e)}({json.repr(arguments)[1:-1]})'

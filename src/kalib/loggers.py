@@ -8,31 +8,37 @@ from dataclasses import dataclass
 from functools import partial
 from functools import wraps as base_wraps
 from hashlib import md5
-from inspect import stack
+from inspect import (
+    stack,
+)
+from itertools import filterfalse
 from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING
 from logging import Logger as BaseLogger
 from os import getenv, sep
+from os.path import splitext
 from pathlib import Path
-from re import match
-from sys import _getframe, argv, getrefcount
+from re import match, search
+from sys import _getframe, argv, getrefcount, modules
+from sysconfig import get_paths
 from time import time
+from traceback import extract_stack, format_stack
 from typing import ClassVar
 from weakref import ref
 
-from kalib.classes import Nothing
-from kalib.misc import args_kwargs, repr_value
-from kalib.descriptors import cache, class_property, pin
-from kalib.functions import to_bytes
-from kalib.internals import (
+from kain import (
     Is,
+    Monkey,
+    Nothing,
     Who,
-    class_of,
-    get_module_from_path,
-    stackoffset,
-    stacktrace,
-    trim_module_path,
+    cache,
+    class_property,
+    optional,
+    pin,
+    to_bytes,
     unique,
 )
+from kain.internals import WinNT, simple_repr
+
 from kalib.misc import toml_read
 from kalib.text import Str
 
@@ -65,6 +71,112 @@ RE_TYPE_ERROR = (
     r'TypeError: (.+)\(\) takes (\d+) positional '
     r'argument but (\d+) were given')
 
+#
+
+@cache
+def trim_module_path(full):
+    dirs = get_paths()
+
+    path = str(full)
+    if WinNT:
+        path = path.lower()
+
+    for scheme, reason in (
+        ('stdlib', True),
+        ('purelib', False),
+        ('platlib', False),
+        ('platstdlib', True),
+    ):
+        subdir = dirs[scheme]
+        if WinNT:
+            subdir = subdir.lower()
+
+        if path.startswith(subdir):
+            return reason, str(full)[len(subdir) +1:]
+
+    subdir = str(Path(__file__).parent.parent)
+
+    if WinNT:
+        subdir = subdir.lower()
+
+    if path.startswith(subdir):
+        return False, str(full)[len(subdir) +1:]
+
+    return None, str(full)
+
+
+def stackoffset(order=None, /, shift=0):
+    stack = extract_stack()[:-1]
+
+    def normalize(x):
+        if not isinstance(x, bytes | str):
+            x = Who.File(x)
+            if not x:
+                raise TypeError(f'{Who.Cast(x)} must be str or bytes')
+
+        return str(Path(x))
+
+    @cache
+    def is_ignored_frame(x):
+        for path in order:
+            if x.startswith(path):
+                return True
+    if order:
+        counter = 0
+        if isinstance(order, str | bytes):
+            order = [order]
+        order = set(map(normalize, filter(bool, order)))
+
+        for no, frame in enumerate(reversed(stack)):
+            if not is_ignored_frame(frame.filename):
+                if counter >= shift:
+                    return len(stack) - no -1
+                else:
+                    counter += 1
+    return 0
+
+
+def stackfilter(line):
+    line = line.lstrip()
+    if line.startswith('File "<frozen importlib._'):
+        return True
+
+    for regex in (
+        r'kalib/descriptors\.py", line \d+, in (__get__|call|type_checker)',
+    ):
+        if search(regex, line):
+            return True
+
+
+def stacktrace(count=None, /, join=True):
+    if count is None:
+        count = stackoffset(__file__) + 1
+
+    stack = format_stack()
+
+    if count > 0:
+        stack = stack[:count]
+
+    elif count <= 0:
+        return stack[len(stack) + count -2].rstrip()
+
+    stack = tuple(map(str.strip, filterfalse(stackfilter, stack)))
+    return '\n'.join(stack) if join else stack
+
+
+@cache
+def get_module_from_path(path):
+    def get_path_without_extension(path):
+        return splitext(Path(path).absolute().resolve())[0]  # noqa: PTH122
+
+    stem = get_path_without_extension(path)
+    for name, module in modules.items():
+        with suppress(AttributeError):
+            if module.__file__ and stem == get_path_without_extension(module.__file__):
+                return name
+
+#
+
 
 def stack_length():
     result = 0
@@ -76,7 +188,7 @@ def stack_length():
 
 
 def wraps(func):
-    if class_of(func) is classmethod:
+    if Is.classOf(func) is classmethod:
         msg = (
             'classmethod is not supported, use @classmethod '
             'decorator directly before method definition')
@@ -96,7 +208,7 @@ def extract_options_from_kwargs(func=None, /, **fields):
         return func
 
     fieldset = set(fields)
-    annotation = {'__annotations__': {k: class_of(v) for k, v in fields.items()}}
+    annotation = {'__annotations__': {k: Is.classOf(v) for k, v in fields.items()}}
     Options = dataclass(kw_only=True)(type('Options', (), annotation | fields))  # noqa: N806
 
     @wraps(func)
@@ -110,10 +222,6 @@ def extract_options_from_kwargs(func=None, /, **fields):
     return wrapper
 
 
-
-
-
-
 class NumericOrSetter:
 
     def __init__(self, instance, attribute, value):
@@ -125,7 +233,7 @@ class NumericOrSetter:
         return int(self.value)
 
     def __radd__(self, something):
-        if isinstance(something, class_of(self)):
+        if isinstance(something, Is.classOf(self)):
             return self.value + something.value
 
         elif isinstance(something, float | int):
@@ -155,7 +263,7 @@ class Logger(BaseLogger):
 
     @pin.cls.here
     def Args(cls):  # noqa: N802
-        return Logging.Args
+        return Who.Args
 
     @pin.cls.here
     def Call(cls):  # noqa: N802
@@ -177,14 +285,14 @@ class Logger(BaseLogger):
 
     @pin.cls.here
     def digest(cls):
-        from kalib.importer import optional
-        return optional('xxhash.xxh32_hexdigest', default=lambda x: md5(x).digest())  # noqa: S324
+        return optional(
+            'xxhash.xxh32_hexdigest',
+            default=lambda x: md5(x).digest())  # noqa: S324
 
     @pin.cls.here
     def getter(cls):
         func = syslog.getLogger
         if func.__name__ != 'getLogger':
-            from kalib.monkey import Monkey
             return Monkey.mapping[func]
         return func
 
@@ -193,7 +301,7 @@ class Logger(BaseLogger):
         if isinstance(node, str):
             name = name or node
         else:
-            node, name = class_of(node), name or Who(node)
+            node, name = Is.classOf(node), name or Who(node)
 
         try:
             logger = cls._instances[name]
@@ -392,7 +500,10 @@ class Logger(BaseLogger):
             method(level, msg, *args, **kw)
             return msg
 
-        lines = stacktrace(stack_offset * (-1, 1)[bool(var.context)], join=not var.count)
+        lines = stacktrace(
+            stack_offset * (-1, 1)[bool(var.context)],
+            join=not var.count)
+
         if lines:
             lines = lines[-var.count:]
 
@@ -417,7 +528,7 @@ class Logger(BaseLogger):
     def fail(self, exception, *args, **kw):
 
         try:
-            from tools.exceptions import exception
+            from tools.exceptions import exception  # noqa: PLC0415
             e = exception(exception)
 
             title = e.message or 'Unknown exception'
@@ -472,7 +583,7 @@ class Logging:
 
     @classmethod
     def Args(cls, *args, **kw):  # noqa: N802
-        return args_kwargs(*args, **kw)
+        return Who.Args(*args, **kw)
 
     @classmethod
     def Call(cls, level=None):  # noqa: N802
@@ -522,9 +633,9 @@ class Logging:
                 result = func(*args, **kw)
                 spent = time() - start
 
-                arguments = f'({cls.Args(*args[1:], **kw)}) '
+                arguments = f'({Who.Args(*args[1:], **kw)}) '
                 time_spent = template.format(spent) if around(spent) else ''
-                value = '' if result is None else f'-> {repr_value(result)}'
+                value = '' if result is None else f'-> {simple_repr(result)}'
 
                 logger.info(
                     f'{arguments if len(arguments) > 3 else ""}{value}{time_spent}')  # noqa: PLR2004
@@ -538,7 +649,7 @@ class Logging:
         template = f' ({{:0.{precise:d}f}}s)'
         around = lambda x: int(x * power)  # noqa: E731
 
-        if Is.function(level) or class_of(level) is classmethod:
+        if Is.function(level) or Is.classOf(level) is classmethod:
             func, level = level, None
             return method_wrapper(func)
 
@@ -558,13 +669,13 @@ class Logging:
         throw = kw.pop('throw', True)
         default = kw.pop('default', None)
 
-        from kalib.exceptions import exception
+        from kalib.exceptions import exception  # noqa: PLC0415
 
         def method_wrapper(func):
 
             def get_logger(exc, args, kw):
                 head = (
-                    f'.{Who(func)}({Logging.Args(args, kw)}) hit '
+                    f'.{Who(func)}({Who.Args(*args, **kw)}) hit '
                     f'{exception(exc).reason}')
 
                 if args:
@@ -635,7 +746,7 @@ class Logging:
                 value = func(logger, *args, **kw)
 
             except TypeError as e:
-                from kalib.exceptions import exception
+                from kalib.exceptions import exception  # noqa: PLC0415
                 message = exception(e).message
 
                 if (
@@ -694,7 +805,7 @@ class Logging:
     @pin.cls.here
     def config(cls):
         """Return logging configuration object."""
-        import logging.config as config  # noqa: PLR0402
+        import logging.config as config  # noqa: PLC0415,PLR0402
         return config
 
     @pin.cls.here
@@ -872,10 +983,9 @@ class Logging:
 
         klass = syslog.getLoggerClass()
         if klass is not Logger:
-            from kalib.misc import sourcefile
             cls.log.verbose(
                 f'somebody override defined logger {Who(Logger)} '
-                f"with {Who(klass)}{sourcefile(klass, 'from %r')}")
+                f"with {Who(klass)}{Who.File(klass, 'from %r')}")
             syslog.setLoggerClass(Logger)
 
         if cls is not node:
@@ -883,7 +993,7 @@ class Logging:
         else:
             logger = syslog.getLogger(Who(node))
 
-        if class_of(logger) is not Logger:
+        if Is.classOf(logger) is not Logger:
             msg = (
                 f"couldn't restore defined logger {Who(Logger)} "
                 f'instead override {Who(klass)}')
@@ -990,7 +1100,6 @@ Logger.levels  # noqa: B018, add custom levels, set out class instead default
 logger = Logging.Default
 
 if Logging.Force:
-    from kalib.monkey import Monkey
     Monkey.wrap(syslog, 'getLogger')(injector)
 
-Args = Logging.Args
+Args = Who.Args

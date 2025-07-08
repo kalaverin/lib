@@ -10,26 +10,27 @@ from typing import (
     Any,
     ClassVar,
     Generic,
-    Optional,
     Union,
     _UnionGenericAlias,
     get_args,
     get_origin,
 )
 
-from kalib.classes import Nothing
-from kalib.datastructures import json, loads
-from kalib.descriptors import cache, pin
-from kalib.importer import optional, required, sort
-from kalib.internals import (
+from kain.classes import (
     Is,
+    Nothing,
     Who,
-    get_owner,
-    iter_inheritance,
+    cache,
+    optional,
+    pin,
+    required,
+    sort,
     unique,
 )
-from kalib.loggers import Args, Logging
-from kalib.misc import sourcefile
+from kain.internals import get_owner, iter_inheritance
+
+from kalib.datastructures import json, loads
+from kalib.loggers import Logging
 from kalib.text import Str
 
 REPR_LIMIT = 2 ** 14
@@ -239,13 +240,13 @@ class dataclass(Logging.Mixin):  # noqa: N801
             msg = (f'{Who(cls)}: scheme {len(fields):d} '
                    f"fields ({' '.join(tuple(fields))}) "
                    f"couldn't match to {len(args) + 1:d} "
-                   f'taken args: {Args(data, *args)[:1024]}')
+                   f'taken args: {Who.Args(data, *args)[:1024]}')
             raise ConfigurationEvaluationError(msg)
 
         args = (data, *args)
         if not fields and args:
             msg = (f"{Who(cls)}: scheme haven't any fields, "
-                   f'taken args: {Args(args)}')
+                   f'taken args: {Who.Args(args)}')
             raise ConfigurationEvaluationError(msg)
 
         required = len(list(filter(attrgetter('required'), fields.values())))
@@ -256,7 +257,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
                 msg = f"taken data ({' '.join(data)})"
             else:
-                msg = f'taken args: {Args(data, *args)}'
+                msg = f'taken args: {Who.Args(data, *args)}'
 
             msg = (
                 f'{Who(cls)}: scheme {required=} '
@@ -575,7 +576,6 @@ def make_auto(field):
         __field__ = field
 
         def __init__(self, *args, **kw) -> None:
-            # TODO: валидировать (опционально) принимаемый конфиг проактивно здесь
             setattr(self, f'_{field}', kw.pop(field, Nothing))
 
             if (
@@ -583,7 +583,7 @@ def make_auto(field):
                 and owner is get_owner(Is.classOf(self), Field)
             ):
                 self.log.warning(
-                    f"{Who(self)}.{Field}{sourcefile(self, '(in %s)')} "
+                    f"{Who(self)}.{Field}{Who.File(self, '(in %s)')} "
                     f"isn't defined, but required because "
                     f"it's {field} schema for instances")
 
@@ -596,7 +596,7 @@ def make_auto(field):
 
             elif getattr(self, f'_{field}', Nothing) is Nothing:
                 self.log.warning(
-                    f"{Who(self)}{sourcefile(self, 'from %s')} it's class "
+                    f"{Who(self)}{Who.File(self, 'from %s')} it's class "
                     f'with dataclass.BaseAutoClass (by {Who(BaseAutoClass)}), '
                     f'but initialized without {field}={{}} passed to __init__; '
                     f'{Who(self)}.{field} call now useless', trace=True, shift=-1)
@@ -618,7 +618,7 @@ def make_auto(field):
 
     def model(cls):
         msg = (
-            f"{Who(cls)}.{Field}{sourcefile(cls, '(from %s)')} "
+            f"{Who(cls)}.{Field}{Who.File(cls, '(from %s)')} "
             f"isn't defined, but required because it's config schema for instances")
         raise TypeError(msg)
 
@@ -636,7 +636,7 @@ def make_auto(field):
 
         if getattr(self, _field, Nothing) is Nothing:
             classes = [
-                f'{Who(cls)}{sourcefile(cls, "(%s)")}'
+                f'{Who(cls)}{Who.File(cls, "(%s)")}'
                 for cls in scheme.__mro_classes__]
             msg = (
                 f'{Who(self)}.{_field} missing, probably you forgot to pass '
@@ -695,7 +695,7 @@ def simple(classname, *names, **kw):
     for name in names:
         field = Field(default, default, True, True, None, True, {}, True)  # noqa: FBT003
         field.name = name
-        field.type = Optional[Any]  # noqa: UP007
+        field.type = Any | None
         field._field_type = _FIELD  # noqa: SLF001
         fields[name] = field
 

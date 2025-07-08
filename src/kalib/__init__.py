@@ -1,7 +1,24 @@
-from kalib.classes import (
+from kain import (
+    Is,
     Missing,
+    Monkey,
     Nothing,
+    Who,
+    add_path,
+    cache,
+    class_property,
+    mixed_property,
+    on_quit,
+    optional,
+    pin,
+    quit_at,
+    required,
+    sort,
+    to_ascii,
+    to_bytes,
+    unique,
 )
+
 from kalib.dataclass import (
     autoclass,
     dataclass,
@@ -11,32 +28,11 @@ from kalib.datastructures import (
     json,
     serializer,
 )
-from kalib.descriptors import (
-    cache,
-    class_property,
-    mixed_property,
-    pin,
-)
 from kalib.exceptions import (
     exception,
 )
-from kalib.functions import (
-    to_ascii,
-    to_bytes,
-)
 from kalib.hypertext import (
     HTTP,
-)
-from kalib.importer import (
-    add_path,
-    optional,
-    required,
-    sort,
-)
-from kalib.internals import (
-    Is,
-    Who,
-    unique,
 )
 from kalib.loggers import (
     Logging,
@@ -47,13 +43,6 @@ from kalib.misc import (
     Timer,
     proxy_to,
     stamp,
-    tty,
-)
-from kalib.monkey import (
-    Monkey,
-)
-from kalib.signals import (
-    quit_at,
 )
 from kalib.text import (
     Str,
@@ -61,9 +50,10 @@ from kalib.text import (
 from kalib.versions import (
     Git,
 )
+
 __all__ = (
-    'Git',
     'HTTP',
+    'Git',
     'Is',
     'Logging',
     'Missing',
@@ -71,7 +61,7 @@ __all__ = (
     'Nothing',
     'Now',
     'Str',
-    'Time',
+    'Timer',
     'Tuple',
     'Who',
     'add_path',
@@ -83,6 +73,7 @@ __all__ = (
     'json',
     'logger',
     'mixed_property',
+    'on_quit',
     'optional',
     'pin',
     'proxy_to',
@@ -93,7 +84,6 @@ __all__ = (
     'stamp',
     'to_ascii',
     'to_bytes',
-    'tty',
     'unique',
 )
 

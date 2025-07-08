@@ -1,8 +1,9 @@
 from time import sleep, time
 
+from kain import cache, pin
+
 from kalib import exception
 from kalib.dataclass import dataclass
-from kalib.descriptors import cache, pin
 
 try:
     import redis.exceptions
@@ -11,8 +12,10 @@ try:
     from redis.connection import ConnectionPool
     from redis_lock import RedisLock
 
-except ImportError:
-    raise ImportError('redis & redis_lock is required, install kalib[redis]')
+except ImportError as e:
+    raise ImportError(
+        'redis & redis_lock is required, install kalib[redis]'
+    ) from e
 
 
 class Pool(dataclass.config):
@@ -82,12 +85,10 @@ class Pool(dataclass.config):
                     break
 
             except self.Recoverable as e:
-                self.log.warning(f'{exception(e).reason}')
+                self.log.warning(exception(e).reason)
 
             sleep(self._poll)
-            continue
         return client
-
 
     def __enter__(self):
         return self.worker
@@ -147,8 +148,8 @@ class Event(Pool):
 
     def changed(
         self,
-        timeout  : float | int | None = None, /,
-        poll     : float | int | None = None,
+        timeout  : float | None = None, /,
+        poll     : float | None = None,
         infinite : bool = True,
     ) -> bool:
         counter = 0

@@ -10,6 +10,7 @@ build = [
 ]
 development = [
   "better-exceptions>=0.3.3",
+  "pre-commit>=4.2.0",
   "pipdeptree>=2.26.1"
 ]
 documentation = [
@@ -17,6 +18,43 @@ documentation = [
   "sphinx-autodoc-typehints>=3.0.1",
   "sphinx-rtd-dark-mode>=1.3.0",
   "sphinx-rtd-theme>=3.0.2"
+]
+linting = [
+  "bandit[toml]>=1.8.5",
+  "black>=25.1.0",
+  "dlint>=0.16.0",
+  "flake8-aaa>=0.17.0",
+  "flake8-bugbear>=23.3.12",
+  "flake8-comprehensions>=3.16.0",
+  "flake8-debugger>=4.1.2",
+  "flake8-eradicate>=1.4.0",
+  "flake8-expression-complexity>=0.0.11",
+  "flake8-fixme>=1.1.1",
+  "flake8-mutable>=1.2.0",
+  "flake8-pytest-style>=2.1.0",
+  "flake8-pytest>=1.4",
+  "flake8-simplify>=0.22.0",
+  "flake8-typing-imports>=1.12.0",
+  "flake8-use-fstring>=1.4",
+  "flake8-variables-names>=0.0.6",
+  "flakeheaven>=3.3.0",
+  "mypy>=1.16.1",
+  "pep8-naming>=0.13.2",
+  "ruff>=0.12.1",
+  "types-redis>=4.6.0.20241004",
+  "types-requests>=2.32.4.20250611",
+  "vulture>=2.14",
+  "yamlfix>=1.17.0",
+  "yamllint>=1.37.1"
+]
+testing = [
+  "async-asgi-testclient>=1.4.11",
+  "faker>=37.4.0",
+  "pytest-asyncio>=1.0.0",
+  "pytest-cov>=6.2.1",
+  "pytest-dotenv>=0.5.2",
+  "pytest-mock>=3.14.1",
+  "pytest>=8.4.1"
 ]
 
 [project]
@@ -33,6 +71,9 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "License :: OSI Approved :: BSD License",
   "Operating System :: OS Independent"
+]
+dependencies = [
+  "kain>=0.1,<0.2"
 ]
 description = "A comprehensive set of advanced utilities for Python programming, e.g. HTTP communication, string handling, logging enhancements, introspection, dynamic importing, property caching descriptors, data class extensions, serialization, etc."
 keywords = [
@@ -79,8 +120,31 @@ usual = [
   "zstd>=1.5.6.7"
 ]
 
-[tool]
-extend = "etc/tool.toml"
+[tool.bandit]
+exclude_dirs = [".venv", ".git"]
+
+[tool.black]
+line-length = 89
+target-version = ["py311"]
+
+[tool.flakeheaven]
+extend = "etc/lint/flakeheaven.toml"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.pylint.messages_control]
+disable = "all"
+enable = [
+  "F",
+  "unused-format-string-argument",
+  "unused-format-string-key",
+  "unused-import",
+  "unused-private-member",
+  "unused-variable",
+  "unused-wildcard-import",
+  "forgotten-debug-statement"
+]
 
 [tool.refurb]
 ignore = [
@@ -89,16 +153,38 @@ ignore = [
   191
 ]
 
+[tool.ruff]
+extend = "etc/lint/ruff.toml"
+
 [tool.ruff.lint.isort]
-known-first-party = [
-  "kalib"
+known-third-party = [
+  "kain"
 ]
-known-third-party = []
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "first-party",
+  "local-project",
+  "local-folder"
+]
+
+[tool.ruff.lint.isort.sections]
+local-project = ["kalib"]
+
+[tool.ruff.lint.per-file-ignores]
+"contrib/*" = []
+"docs/*" = [
+  "INP001",  # File `docs/conf.py` is part of an implicit namespace package. Add an `__init__.py`.
+  "I001",  # [*] Import block is un-sorted or un-formatted
+  "PTH100",  # `os.path.abspath()` should be replaced by `Path.resolve()`
+  "A001"  # Variable `copyright` is shadowing a Python builtin
+]
+"src/*" = []
+"tests/*" = ["S101", "PLR2004", "ERA001", "INP001"]
 
 [tool.setuptools]
-packages = [
-  "kalib"
-]
+packages = []
 
 [tool.setuptools.package-dir]
 "" = "src"
@@ -109,10 +195,19 @@ default-groups = [
 ]
 
 [tool.yamlfix]
+allow_duplicate_keys = false
+comments_min_spaces_from_content = 2
+comments_require_starting_space = true
+comments_whitelines = 1
+explicit_start = true
+indent_mapping = 2
+indent_offset = 2
+indent_sequence = 4
 line_length = 89
+none_representation = "null"
 preserve_quotes = false
 quote_basic_values = false
-quote_representation = "'"
-section_whitelines = 1
+quote_representation = '"'
+section_whitelines = 2
 sequence_style = "block_style"
-whitelines = 1
+whitelines = 0

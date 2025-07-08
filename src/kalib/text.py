@@ -2,9 +2,8 @@ from contextlib import suppress
 from math import log2
 from re import findall
 
-from kalib.descriptors import pin
-from kalib.functions import to_ascii
-from kalib.internals import Who, unique
+from kain import Who, optional, pin, required, to_ascii, unique
+
 from kalib.misc import proxy_to
 
 
@@ -26,7 +25,6 @@ def replace_class_with_str(method, *args, **kw):
 
 
 def get_mime(data):
-    from kalib.importer import optional
     if (
         data and
         (read := optional('magic.from_buffer', quiet=False)) and
@@ -78,7 +76,7 @@ class Str:
             return f'{Who(something)}: {something}'
 
         raise TypeError(
-            f"{Who(cls)} input must be bytes | str, got {Who.Cast(something)}")
+            f'{Who(cls)} input must be bytes | str, got {Who.Cast(something)}')
 
     @classmethod
     def to_bytes(cls, something, *args, **kw):
@@ -103,7 +101,6 @@ class Str:
 
     @pin
     def chardet(self):
-        from kalib.importer import required
         with suppress(Exception):
             func = required('charset_normalizer.detect')
             return func(bytes(self))

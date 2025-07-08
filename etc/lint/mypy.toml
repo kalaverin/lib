@@ -1,0 +1,4 @@
+[tool.mypy]
+disable_error_code = [
+  "import-untyped"
+]

@@ -9,18 +9,19 @@ from pickle import dumps as generic_dumps
 from pickle import loads as generic_loads
 from typing import ClassVar
 
-from kalib.classes import Nothing
-from kalib.descriptors import cache
-from kalib.misc import args_kwargs, repr_value
-from kalib.functions import to_ascii, to_bytes
-from kalib.importer import optional, required, sort
-from kalib.internals import (
+from kain import (
     Is,
+    Monkey,
+    Nothing,
     Who,
-    sourcefile,
+    cache,
+    required,
+    sort,
+    to_ascii,
+    to_bytes,
 )
+
 from kalib.loggers import Logging
-from kalib.monkey import Monkey
 from kalib.text import Str
 
 BACKENDS = {b'json': 'orjson', b'ujson': 'orjson'}
@@ -28,7 +29,6 @@ DEADBEEF = b'\xDE\xAD\xBE\xEF'
 
 serializers = {}
 logger = Logging.get(__name__)
-Dict = dict | optional('immutabledict.immutabledict', default=dict)
 
 
 try:
@@ -119,7 +119,7 @@ def serializer(*classes):
     direct_call = len(classes) == 2 and Is.function(classes[1])  # noqa: PLR2004
 
     def name(obj):
-        return f'{Who(obj, addr=True)} ({sourcefile(obj)})'
+        return f'{Who(obj, addr=True)} ({Who.File(obj)})'
 
     def serialize(func):
 
@@ -132,7 +132,7 @@ def serializer(*classes):
             if cls in serializers:
                 if (
                     Who.Name(serializers[cls]) == Who.Name(func) and
-                    sourcefile(serializers[cls]) == sourcefile(func)
+                    Who.File(serializers[cls]) == Who.File(func)
                 ):
                     continue
 
@@ -211,7 +211,7 @@ def try_json(data, /, **kw):
 
 
 @Monkey.bind(json)
-def cast(obj, throw=False):
+def cast(obj):
     if Is.mapping(obj):
         result = to_json({k: cast(v) for k, v in obj.items()})
 
@@ -362,24 +362,24 @@ def namedtuple_builder(*fields, name=None):
     return namedtuple(name or 'Tuple', fields)
 
 
-def Tuple(*args, **kw):
+def Tuple(*args, **kw):  # noqa: N802
     name = kw.pop('name', None)
     rename = kw.pop('rename', False)
     sort_keys = kw.pop('sort_keys', True)
 
     if not name and kw and len(args) == 1 and isinstance(args[0], str):
-        # Tuple('MyTuple', **kw)
+        # this is: Tuple('MyTuple', **kw)
         return make_namedtuple(kw, args[0], rename, sort_keys)
 
     if not kw and len(args) == 1:
-        # Tuple(namedtuple) or Tuple(dict, **kw)
+        # this is: Tuple(namedtuple) or Tuple(dict, **kw)
         return make_namedtuple(args[0], name, rename, sort_keys)
 
     elif (
         not args and kw  # this is Tuple(**data) style
     ):
         if name is None and rename is False and sort_keys is True:
-            # Tuple(**data)
+            # this is: Tuple(**data)
             return make_namedtuple(kw, name, rename, sort_keys)
 
         fields = []
@@ -395,11 +395,11 @@ def Tuple(*args, **kw):
             'Tuple() used with **kw style but kw contains '
             f'Tuple{fields} reserved keys')
 
-    raise TypeError(f'Tuple({args_kwargs(*args, **kw)})')
+    raise TypeError(f'Tuple({Who.Args(*args, **kw)})')
 
 
 def make_namedtuple(
-    data      : Dict | tuple,
+    data      : dict | tuple,
     name      : str | None,
     rename    : bool,
     sort_keys : bool
@@ -407,19 +407,20 @@ def make_namedtuple(
     if isinstance(data, tuple) and hasattr(data, '_asdict'):
         return data  # collections.namedtuple itself
 
-    elif not isinstance(data, Dict):
+    elif not isinstance(data, dict):
         raise TypeError(f'expected dict, got {Who.Is(data)}')
 
     keys = tuple(sort(data) if sort_keys else data)
 
     if not rename:
-        fields = keys[:]
+        fields = keys.copy()
     else:
         fields = tuple(f'{k}_' if k in RESERVED_KEYSET else k for k in keys)
 
     return namedtuple_builder(*fields, name=name)(*map(data.__getitem__, keys))
 
 #
+
 
 with suppress(ImportError):
     from pydantic import BaseModel

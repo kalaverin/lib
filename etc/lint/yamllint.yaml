@@ -3,6 +3,7 @@ yaml-files:
   - '*.yaml'
   - '*.yml'
 
+
 rules:
   braces:
     min-spaces-inside: 0
@@ -42,17 +43,18 @@ rules:
   truthy:
     level: warning
     allowed-values:
-      - 'true'
-      - 'false'
-      - 'yes'
-      - 'no'
-      - 'True'
       - 'False'
+      - 'True'
+      - 'false'
+      - 'true'
+      - 'no'
+      - 'yes'
+
 
 ignore: |-
-  .helm/templates/
-  helm/templates/
-  .venv/
-  venv/
   .env/
+  .helm/templates/
+  .venv/
   env/
+  helm/templates/
+  venv/

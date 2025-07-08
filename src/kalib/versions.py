@@ -3,10 +3,10 @@ from os import walk
 from pathlib import Path
 from re import match
 
+from kain import Who, cache, optional, pin, required, sort
+from kain.internals import iter_stack
+
 from kalib.datastructures import json
-from kalib.descriptors import cache, pin
-from kalib.importer import optional, required, sort
-from kalib.internals import Who, iter_stack, sourcefile
 from kalib.loggers import Logging
 from kalib.misc import is_python_runtime
 
@@ -163,7 +163,7 @@ def add_versioned_path(pattern=None):
             msg = (
                 f"couldn't import {something!a} from module {Who.Name(module)!a}; "
                 f"may be it's not found, but declared in {Who.Name(module)}.__all__ = "
-                f'{json.repr(to_import)} in {sourcefile(module)!r}')
+                f'{json.repr(to_import)} in {Who.File(module)!r}')
 
             logger.critical(msg)
             raise ImportError(msg) from None

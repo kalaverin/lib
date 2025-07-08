@@ -3,53 +3,28 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from itertools import cycle
 from math import log2
-from operator import attrgetter, methodcaller
+from operator import attrgetter
 from pathlib import Path
 from random import shuffle
-from sys import stderr, stdin, stdout, version_info
+from sys import version_info
 from time import monotonic, time
 
-from kalib.classes import Missing
-from kalib.descriptors import cache, class_property, pin
-from kalib.functions import to_bytes
-from kalib.internals import Is, Who, get_attr
-from kalib.internals import sourcefile as generic_sourcefile
+from kain import Is, Missing, Who, cache, class_property, pin, required, to_bytes
+from kain.internals import get_attr
 
 Nothing = Missing()
 
 
 @cache
-def get_importer():
-    # avoid circular imports
-    from kalib.importer import required
-    return required
-
-
-@cache
 def get_toml_loader():
     if version_info >= (3, 11):
-        from tomllib import load
+        from tomllib import load  # noqa: PLC0415
     else:
         try:
-            from tomli import load
+            from tomli import load  # noqa: PLC0415
         except ImportError as e:
             raise ImportError('install "tomli" or upgrade to Python 3.11+') from e
     return load
-
-
-@cache
-def get_yaml_loader():
-    return get_importer()('yaml.safe_load')
-
-
-def is_tty():
-    """Return True if all standard streams are tty."""
-
-    if not getattr(sys, 'frozen', False):  # nuitka compiler checks this
-        return all(map(methodcaller('isatty'), (stderr, stdin, stdout)))
-
-
-tty = is_tty()
 
 
 def Now(tz=True, /, **kw):  # noqa: N802
@@ -183,7 +158,8 @@ def proxy_to(  # noqa: PLR0915
                         msg = (
                             f'{Who(node)}.{method} {Who.Name(getter)[:4]}-proxied -> '
                             f"{Who(node)}.{pivot}.{method}, but isn't exists "
-                            f"('{method}' not in {Who(node)}.{pivot}): {Who.Is(entity)}")
+                            f"('{method}' not in {Who(node)}.{pivot}): "
+                            f'{Who.Is(entity)}')
 
                         if default is Nothing:
                             raise Is.classOf(e)(msg) from e
@@ -217,16 +193,6 @@ def proxy_to(  # noqa: PLR0915
     return binder
 
 
-def sourcefile(something, template=None):
-    """Return sourcefile for object if it's reachable with format template"""
-    source = generic_sourcefile(something)
-    if not source:
-        return ''
-    elif not template:
-        return str(source)
-    return ' ' + (template % source)
-
-
 def to_tuple(x):
     return tuple(x or ()) if Is.iterable(x) else (x,)
 
@@ -238,7 +204,7 @@ def toml_read(path):
 
 
 def yaml_read(path):
-    loader = get_yaml_loader()
+    loader = required('yaml.safe_load')
     with Path(path).open('rb') as fd:
         return loader(fd.read())
 
@@ -274,7 +240,7 @@ def shuffler(iterable):
 def set_title(title=None, short=True):
 
     opts = 0
-    func = get_importer()('setproctitle.setproctitle')
+    func = required('setproctitle.setproctitle')
 
     if title:
         name = title
@@ -293,7 +259,7 @@ def set_title(title=None, short=True):
 def fasthash(path, algo='xxhash.xxh128'):
     """Generate fast cache by file content according to sector size."""
 
-    hasher = get_importer()(algo)()
+    hasher = required(algo)()
 
     path = Path(path)
     size = path.stat().st_size
@@ -319,40 +285,3 @@ def fasthash(path, algo='xxhash.xxh128'):
 def is_python_runtime():
     """Checks if current runtime is Python, not Nuitka or PyInstaller."""
     return Path(sys.executable).is_file()
-
-
-#
-
-def repr_value(x):
-    if (
-        x is True or
-        x is False or
-        x is None
-    ) or isinstance(x, str):
-        return x
-
-    elif isinstance(x, int | float):
-        return repr(x)
-
-    return Who.Cast(x)
-
-
-def args_kwargs(*args, **kw):
-    """Return formatted arguments."""
-
-    def format_args(x):
-        return repr(tuple(map(repr_value, x)))[1:-1].rstrip(',')
-
-    def format_kwargs(x):
-        return ', '.join(f'{k}={repr_value(v)}' for k, v in x.items())
-
-    if args and kw:
-        return f'{format_args(args)}, {format_kwargs(kw)}'
-
-    elif args:
-        return format_args(args)
-
-    elif kw:
-        return format_kwargs(kw)
-
-    return ''

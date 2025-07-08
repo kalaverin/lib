@@ -9,30 +9,58 @@ Requires: venv, update
 Runs all defined pre-commit hooks.
 
 ```bash
-    uvx yamlfix --exclude '.venv/' .
-    uvx pre-commit run --config etc/pre-commit.yaml --color always --all
+    uv sync --group linting
 
-    # uv run ruff check .
-    # uv run black --check --diff .
+    uv run --quiet ruff check \
+        --fix \
+        'src/' 'tests/'
 
-    uv run -q vulture --min-confidence 66 'src/'
-    # uv run -q mypy --config-file etc/mypy.toml .
+    uv run --quiet yamlfix \
+        --exclude '.venv/' \
+        .
 
-    # uv run -q bandit \
-    #     --quiet \
-    #     --recursive \
-    #     --severity-level all \
-    #     --confidence-level all \
-    #     --configfile pyproject.toml \
-    #     src/
+    uv run --quiet pre-commit run \
+        --config etc/pre-commit.yaml \
+        --show-diff-on-failure \
+        --color always \
+        --all
 
-    # uv run -q bandit \
-    #     --quiet \
-    #     --recursive \
-    #     --confidence-level all \
-    #     --configfile pyproject.toml \
-    #     --skip B101,B105,B106 \
-    #     tests/
+    uv run --quiet vulture \
+        --min-confidence 75 \
+        'src/' 'tests/'
+
+    uv run --quiet flakeheaven lint \
+        --config etc/lint/flakeheaven.toml \
+        'src/' 'tests/'
+
+    uv run --quiet ruff check \
+        'src/' 'tests/'
+
+    uv run --quiet bandit \
+        --quiet \
+        --recursive \
+        --severity-level all \
+        --confidence-level all \
+        --configfile pyproject.toml \
+        'src/'
+
+    uv run --quiet bandit \
+        --quiet \
+        --recursive \
+        --severity-level all \
+        --confidence-level all \
+        --configfile pyproject.toml \
+        --skip B101,B105,B106 \
+        'tests/'
+
+    uv run --quiet yamllint \
+        --format parsable \
+        --config-file etc/lint/yamllint.yaml \
+        .
+
+    uv run --quiet mypy \
+        --config-file etc/lint/mypy.toml \
+        'src/' 'tests/'
 ```
 
 ## force-update
