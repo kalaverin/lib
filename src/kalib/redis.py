@@ -22,6 +22,7 @@ class Pool(dataclass.config):
         TimeoutError,
         redis.exceptions.BusyLoadingError,
         redis.exceptions.ClusterDownError,
+        redis.exceptions.ConnectionError,
         redis.exceptions.TimeoutError,
         redis.exceptions.TryAgainError)
 
@@ -72,7 +73,8 @@ class Pool(dataclass.config):
 
     #
 
-    def __enter__(self):
+    @property
+    def worker(self):
         client = self.pool
         while self._robust:
             try:
@@ -85,6 +87,10 @@ class Pool(dataclass.config):
             sleep(self._poll)
             continue
         return client
+
+
+    def __enter__(self):
+        return self.worker
 
     def __exit__(self, *_, **__): ...
 

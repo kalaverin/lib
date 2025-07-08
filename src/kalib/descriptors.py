@@ -46,7 +46,7 @@ def extract_wrapped(desc):
         return desc.__get__
 
     # when it's full-featured (cached) property
-    if Is.subclass(desc, BaseProperty):
+    if Is.subclass(desc, AbstractProperty):
         return desc.call
 
     # when it's builtin @property
@@ -57,13 +57,10 @@ def extract_wrapped(desc):
     if Is.subclass(desc, cached_property):
         return desc.func
 
-    head = f'expected desc derived from {Who(AbstractProperty)}'
-    if Is.classOf(desc) is not cached_property:
-        raise TypeError(f'{head}, but got {Who(desc)} instead')
-
-    raise TypeError(
-        f'{head}, but got {Who(desc)}, may be you use '
-        f'simple @pin instead @pin.natuve?')
+    raise NotImplementedError(
+        f"couldn't extract wrapped function from {Who(desc)}: "
+        f'replace it with @property, @cached_property, @{Who(pin)}, '
+        f'or other descriptor derived from {Who(AbstractProperty)}')
 
 
 def parent_call(func):
