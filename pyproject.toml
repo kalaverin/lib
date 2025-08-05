@@ -73,7 +73,7 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "kain>=0.1.1,<0.2.0"
+  "kain>=0.1.2,<0.2.0"
 ]
 description = "A comprehensive set of advanced utilities for Python programming, e.g. HTTP communication, string handling, logging enhancements, introspection, dynamic importing, property caching descriptors, data class extensions, serialization, etc."
 keywords = [
