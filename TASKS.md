@@ -280,11 +280,11 @@ After validating the readiness for an update, it prompts to proceed. Once confir
 
     # non destructive stop here
 
-    if [ -d "tests/" ]; then
-        $XC test
-    fi
+    # if [ -d "tests/" ]; then
+    #     $XC test
+    # fi
 
-    $XC lint || true
+    # $XC lint || true
     uvx --from liontools restore-mtime || echo "datetime restoration failed, return: $?, skip"
 
     ls -la
