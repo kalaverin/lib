@@ -413,7 +413,7 @@ def make_namedtuple(
     keys = tuple(sort(data) if sort_keys else data)
 
     if not rename:
-        fields = keys.copy()
+        fields = tuple(keys)
     else:
         fields = tuple(f'{k}_' if k in RESERVED_KEYSET else k for k in keys)
 

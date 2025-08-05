@@ -16,7 +16,7 @@ from typing import (
     get_origin,
 )
 
-from kain.classes import (
+from kain import (
     Is,
     Nothing,
     Who,

@@ -15,11 +15,11 @@ from kain import (
     cache,
     class_property,
     optional,
-    parent_call,
     pin,
     required,
     sort,
 )
+from kain.descriptors import parent_call
 
 from kalib.dataclass import dataclass
 from kalib.datastructures import Encoding, json, loads, pack, serializer, unpack

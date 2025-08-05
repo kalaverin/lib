@@ -73,7 +73,7 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "kain>=0.1,<0.2"
+  "kain>=0.1.1,<0.2.0"
 ]
 description = "A comprehensive set of advanced utilities for Python programming, e.g. HTTP communication, string handling, logging enhancements, introspection, dynamic importing, property caching descriptors, data class extensions, serialization, etc."
 keywords = [
@@ -91,7 +91,7 @@ keywords = [
 ]
 name = "kalib"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 version = "0.21.32"
 
 [project.license]
@@ -184,7 +184,7 @@ local-project = ["kalib"]
 "tests/*" = ["S101", "PLR2004", "ERA001", "INP001"]
 
 [tool.setuptools]
-packages = []
+packages = ["kalib"]
 
 [tool.setuptools.package-dir]
 "" = "src"
