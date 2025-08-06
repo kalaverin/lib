@@ -22,7 +22,6 @@ from kain import (
     Nothing,
     Who,
     cache,
-    optional,
     pin,
     required,
     sort,
@@ -62,9 +61,6 @@ class ConfigurationTypeError(ConfigurationSchemeError, TypeError):
 
 def fields_cast(data):
     return ', '.join(f'({Who(data[k])}){k}' for k in sort(data))
-
-
-Dict = dict | optional('immutabledict.immutabledict', default=dict)
 
 
 @base_dataclass(kw_only=True)
@@ -194,9 +190,6 @@ class dataclass(Logging.Mixin):  # noqa: N801
     @classmethod
     def _process(cls, data, *args, **kw):  # noqa: ARG003, PLR0912
         fields = cls.__fields_dict__
-
-        if isinstance(data, Dict):
-            data = dict(data)
 
         if isinstance(data, dict):
             for key, field in fields.items():
