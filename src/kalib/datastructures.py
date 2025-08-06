@@ -9,6 +9,7 @@ from pickle import dumps as generic_dumps
 from pickle import loads as generic_loads
 from typing import ClassVar
 
+from charded import Str
 from kain import (
     Is,
     Monkey,
@@ -22,7 +23,6 @@ from kain import (
 )
 
 from kalib.loggers import Logging
-from kalib.text import Str
 
 BACKENDS = {b'json': 'orjson', b'ujson': 'orjson'}
 DEADBEEF = b'\xDE\xAD\xBE\xEF'
@@ -413,7 +413,7 @@ def make_namedtuple(
     keys = tuple(sort(data) if sort_keys else data)
 
     if not rename:
-        fields = tuple(keys)
+        fields = tuple(keys)  # noqa: FURB123
     else:
         fields = tuple(f'{k}_' if k in RESERVED_KEYSET else k for k in keys)
 

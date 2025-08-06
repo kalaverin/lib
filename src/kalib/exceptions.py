@@ -2,10 +2,10 @@ from contextlib import suppress
 from traceback import format_exception
 from typing import NamedTuple
 
+from charded import Str
 from kain import Who
 
 from kalib.datastructures import json, serializer
-from kalib.text import Str
 
 
 class Error(NamedTuple):

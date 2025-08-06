@@ -105,20 +105,16 @@ multiline-quotes = "double"
 
 [lint.isort]
 force-to-top = []  # used for override special importers in tests/
-known-first-party = ["kain"]
+known-first-party = ["kalib"]
 relative-imports-order = "closest-to-furthest"
 section-order = [
   "future",
   "standard-library",
   "third-party",
   "first-party",
-  "local-project",
   "local-folder"
 ]
 split-on-trailing-comma = true
-
-[lint.isort.sections]
-"local-project" = ["src", "tests"]
 
 [lint.mccabe]
 max-complexity = 20

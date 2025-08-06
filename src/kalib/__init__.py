@@ -1,3 +1,6 @@
+from charded import (
+    Str,
+)
 from kain import (
     Is,
     Missing,
@@ -11,6 +14,7 @@ from kain import (
     on_quit,
     optional,
     pin,
+    proxy_to,
     quit_at,
     required,
     sort,
@@ -41,11 +45,7 @@ from kalib.loggers import (
 from kalib.misc import (
     Now,
     Timer,
-    proxy_to,
     stamp,
-)
-from kalib.text import (
-    Str,
 )
 from kalib.versions import (
     Git,

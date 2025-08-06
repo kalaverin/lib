@@ -25,6 +25,7 @@ from traceback import extract_stack, format_stack
 from typing import ClassVar
 from weakref import ref
 
+from charded import Str
 from kain import (
     Is,
     Monkey,
@@ -40,7 +41,6 @@ from kain import (
 from kain.internals import WinNT, simple_repr
 
 from kalib.misc import toml_read
-from kalib.text import Str
 
 NOTICE    = INFO + 5
 DEPRECATE = INFO - 3

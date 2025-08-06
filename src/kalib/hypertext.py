@@ -9,6 +9,7 @@ from pathlib import Path
 from re import split, sub
 from typing import ClassVar
 
+from charded import Str
 from kain import (
     Is,
     Who,
@@ -16,6 +17,7 @@ from kain import (
     class_property,
     optional,
     pin,
+    proxy_to,
     required,
     sort,
 )
@@ -24,8 +26,6 @@ from kain.descriptors import parent_call
 from kalib.dataclass import dataclass
 from kalib.datastructures import Encoding, json, loads, pack, serializer, unpack
 from kalib.loggers import Logging
-from kalib.misc import proxy_to
-from kalib.text import Str
 
 
 def build_enumerate(name, *order):

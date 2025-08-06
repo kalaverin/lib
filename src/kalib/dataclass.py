@@ -16,6 +16,7 @@ from typing import (
     get_origin,
 )
 
+from charded import Str
 from kain import (
     Is,
     Nothing,
@@ -31,7 +32,6 @@ from kain.internals import get_owner, iter_inheritance
 
 from kalib.datastructures import json, loads
 from kalib.loggers import Logging
-from kalib.text import Str
 
 REPR_LIMIT = 2 ** 14
 

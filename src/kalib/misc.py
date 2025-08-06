@@ -1,16 +1,21 @@
 import sys
 from datetime import datetime, timedelta, timezone
-from functools import partial
 from itertools import cycle
 from math import log2
-from operator import attrgetter
 from pathlib import Path
 from random import shuffle
 from sys import version_info
 from time import monotonic, time
 
-from kain import Is, Missing, Who, cache, class_property, pin, required, to_bytes
-from kain.internals import get_attr
+from kain import (
+    Is,
+    Missing,
+    cache,
+    class_property,
+    proxy_to,  # noqa: F401
+    required,
+    to_bytes,
+)
 
 Nothing = Missing()
 
@@ -72,125 +77,6 @@ class Timer:
     @property
     def delta(self):
         return monotonic() - self._start if self._start else 0.0
-
-
-def proxy_to(  # noqa: PLR0915
-    *mapping,
-    getter  = attrgetter,
-    default = Nothing,
-    pre     = None,
-    safe    = True,
-):
-    if isinstance(mapping[-1], str):
-        bind = pin
-
-    elif mapping[-1] is None:
-        bind, mapping = None, mapping[:-1]
-
-    else:
-        bind, mapping = mapping[-1], mapping[:-1]
-
-    def binder(cls):  # noqa: PLR0915
-
-        try:
-            fields = cls.__proxy_fields__
-        except AttributeError:
-            fields = []
-            cls.__proxy_fields__ = fields
-
-        pivot, mapping_list = mapping[0], mapping[1:]
-
-        if not Is.Class(cls):
-            msg = f"{Who.Is(cls)} isn't a class"
-            raise TypeError(msg)
-
-        if (
-            not mapping_list or
-            (len(mapping_list) == 1 and not isinstance(mapping_list[0], str))
-        ):
-            raise ValueError(f'empty {mapping_list=} for {pivot=}')
-
-        for method in mapping_list:
-
-            if safe and not method.startswith('_') and get_attr(cls, method):
-                msg = (
-                    f'{Who(cls)} already exists {method!a}: '
-                    f'{get_attr(cls, method)}')
-                raise TypeError(msg)
-
-            def lazy_call(method, node):
-                if not isinstance(pivot, str):
-                    try:
-                        return getattr(pivot, method)
-                    except AttributeError as e:
-                        msg = (
-                            f'{Who(node)}.{method} {Who.Name(getter)[:4]}-proxied -> '
-                            f"{Who(pivot)}.{method}, but last isn't exists")
-                        raise TypeError(msg) from e
-
-                try:
-                    entity = getattr(node, pivot)
-                except AttributeError as e:
-                    msg = (
-                        f'{Who(node)}.{method} {Who.Name(getter)[:4]}-proxied -> '
-                        f'{Who(node)}.{pivot}.{method}, but '
-                        f"{Who(node)}.{pivot} isn't exists")
-                    raise TypeError(msg) from e
-
-                if entity is None:
-                    msg = (
-                        f'{Who(node)}.{method} {Who.Name(getter)[:4]}-proxied -> '
-                        f'{Who(node)}.{pivot}.{method}, but current '
-                        f'{Who(node)}.{pivot} is None')
-
-                    if default is Nothing:
-                        raise TypeError(msg)
-
-                    msg = f'{msg}; return {Who.Is(default)}'
-                    cls.log.verbose(msg)
-                    attribute = default
-
-                else:
-                    try:
-                        attribute = getter(method)(entity)
-
-                    except (AttributeError, KeyError) as e:
-                        msg = (
-                            f'{Who(node)}.{method} {Who.Name(getter)[:4]}-proxied -> '
-                            f"{Who(node)}.{pivot}.{method}, but isn't exists "
-                            f"('{method}' not in {Who(node)}.{pivot}): "
-                            f'{Who.Is(entity)}')
-
-                        if default is Nothing:
-                            raise Is.classOf(e)(msg) from e
-
-                        msg = f'{msg}; return {Who.Is(default)}'
-                        cls.log.verbose(msg)
-                        attribute = default
-
-                return partial(pre, attribute) if pre else attribute
-
-            lazy_call.__name__ = method
-            lazy_call.__qualname__ = f'{pivot}.{method}'
-
-            if bind is None:
-                node = cls.__dict__[pivot]
-                try:
-                    value = node.__dict__[method]
-                except KeyError:
-                    value = getattr(node, method)
-            else:
-                wrap = partial(lazy_call, method)
-                wrap.__name__ = method
-                wrap.__qualname__ = f'{pivot}.{method}'
-                value = bind(wrap)
-
-            fields.append(method)
-            setattr(cls, method, value)
-            cls.__proxy_fields__.sort()
-
-        return cls
-    return binder
 
 
 def to_tuple(x):
