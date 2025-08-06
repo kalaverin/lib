@@ -73,7 +73,8 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "kain>=0.1.2,<0.2.0"
+  "charded>=0.1.0",
+  "kain>=0.1.3,<0.2.0",
 ]
 description = "A comprehensive set of advanced utilities for Python programming, e.g. HTTP communication, string handling, logging enhancements, introspection, dynamic importing, property caching descriptors, data class extensions, serialization, etc."
 keywords = [
@@ -92,7 +93,7 @@ keywords = [
 name = "kalib"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
-version = "0.22.2"
+version = "0.22.3"
 
 [project.license]
 text = "BSD License"
@@ -100,12 +101,10 @@ text = "BSD License"
 [project.optional-dependencies]
 data = [
   "base2048>=0.1.3",
-  "charset-normalizer>=3.3.2",
   "fake-useragent>=2.2.0",
   "feedparser>=6.0.11",
   "lxml>=5.4.0",
   "msgpack>=1.1.0",
-  "python-magic>=0.4.27",
   "yarl>=1.20.0"
 ]
 redis = [
