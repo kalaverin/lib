@@ -4,10 +4,11 @@ from collections import deque, namedtuple
 from contextlib import suppress
 from datetime import date, datetime
 from keyword import kwlist
+from pathlib import Path
 from pickle import UnpicklingError
 from pickle import dumps as generic_dumps
 from pickle import loads as generic_loads
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from charded import Str
 from kain import (
@@ -21,7 +22,6 @@ from kain import (
     to_ascii,
     to_bytes,
 )
-
 from kalib.loggers import Logging
 
 BACKENDS = {b'json': 'orjson', b'ujson': 'orjson'}
@@ -185,7 +185,7 @@ def to_json(func, data, /, **kw):
     with suppress(UnicodeEncodeError, UnicodeDecodeError):
         return encode(result)
 
-    encode = (Str.to_str, Str.to_bytes)[binary]
+    encode = (Str.to_text, Str.to_bytes)[binary]
     return encode(result)
 
 
@@ -422,9 +422,14 @@ def make_namedtuple(
 #
 
 
+@serializer(Path)
+def from_pathlib(obj: Path) -> str:
+    return str(obj)
+
+
 with suppress(ImportError):
     from pydantic import BaseModel
 
     @serializer(BaseModel)
-    def from_pydantic(obj):
+    def from_pydantic(obj: BaseModel) -> dict[str, Any]:
         return obj.model_dump()

@@ -29,25 +29,29 @@ class Pool(dataclass.config):
         redis.exceptions.TimeoutError,
         redis.exceptions.TryAgainError)
 
-    class PoolConfig(dataclass):
+    class Config(dataclass):
+
         host                     : str = 'localhost'
         port                     : int = 6379
         db                       : int = 0
         password                 : str | None = None
+
         socket_timeout           : float | int = 5
         socket_connect_timeout   : float | int = 5
         socket_keepalive         : bool = True
         socket_keepalive_options : dict | None = None
+
         max_connections          : int = 50
         retry_on_timeout         : bool = True
         health_check_interval    : int = 30
+
         encoding                 : str = 'utf-8'
         encoding_errors          : str = 'strict'
         decode_responses         : int = True
 
     @pin.cls.here
     def DefaultPool(cls):  # noqa: N802
-        return Redis(connection_pool=ConnectionPool(**cls.PoolConfig.Defaults))
+        return Redis(connection_pool=ConnectionPool(**cls.Config.Defaults))
 
     def __init__(
         self,
@@ -159,8 +163,7 @@ class Event(Pool):
         if timeout := (timeout or self._timeout):
             deadline = start + timeout
 
-        condition = self.on
-        while condition:
+        while self.on:
             value = self.integer
 
             if not value:
