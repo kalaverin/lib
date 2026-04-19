@@ -240,8 +240,8 @@ class NumericOrSetter:
             return self.value + something
 
         msg = (
-            f'{Who(something)} can add only self or numeric, '
-            f'not ({Who(something)}) {something!r}')
+            f'{Who.Is(something)} can add only self or numeric, '
+            f'not ({Who.Is(something)}) {something!r}')
         raise TypeError(msg)
 
     __add__ = __radd__
@@ -252,7 +252,7 @@ class NumericOrSetter:
         return self.instance
 
     def __repr__(self):
-        return f'<{Who(self)}[{id(self):x}]={self.value!r}>'
+        return f'<{Who.Is(self)}[{id(self):x}]={self.value!r}>'
 
 
 class Logger(BaseLogger):
@@ -301,7 +301,7 @@ class Logger(BaseLogger):
         if isinstance(node, str):
             name = name or node
         else:
-            node, name = Is.classOf(node), name or Who(node)
+            node, name = Is.classOf(node), name or Who.Is(node)
 
         try:
             logger = cls._instances[name]
@@ -327,7 +327,7 @@ class Logger(BaseLogger):
         """Return levels dictionary."""
 
         def make_wrapper(name, level):
-            qname = f'{Who(cls, full=False)}.{name}'
+            qname = f'{Who.Is(cls)}.{name}'
 
             def wrapper(self):
                 if self.isEnabledFor(level):
@@ -390,14 +390,14 @@ class Logger(BaseLogger):
                 }[level]
 
             elif not isinstance(level, int) or level < 0:
-                msg = f'({Who(level)}) {level=} must me positive integer'
+                msg = f'({Who.Is(level)}) {level=} must me positive integer'
                 raise TypeError(msg)
 
             return getattr(
                 self, (self.levels.get(level) or self.Levels.Verbose).lower())
 
         wrapper.__name__ = 'by_level'
-        wrapper.__qname__ = f'{Who(self)}.by_level'
+        wrapper.__qname__ = f'{Who.Is(self)}.by_level'
         return wrapper
 
     @property
@@ -564,7 +564,7 @@ class Logging:
             @pin.cls
             def logger(cls):
                 log = cls.log
-                log.deprecate(f'-> {Who(cls)}.log', shift=-5, stack=5)
+                log.deprecate(f'-> {Who.Is(cls)}.log', shift=-5, stack=5)
                 return log
 
         return Mixin
@@ -600,14 +600,14 @@ class Logging:
                         "{0}.logger attribute for {0}.{1} method wrapper isn't "
                         'exists; try implement logger as data-descrtiptor, inherit '
                         'your {0} from {2} or from {3}'
-                        .format(Who(args[0]), Who(func), Who(cls), Who(Logging)))
+                        .format(Who.Is(args[0]), Who.Is(func), Who.Is(cls), Who.Is(Logging)))
                     raise AttributeError(msg) from e
 
                 except IndexError as e:
                     msg = (
                         f"class or instance reference isn't passed to method, looks "
                         f'like as call with staticmethod or similar context without '
-                        f'any args, pass into {Who(func)} something with logger as '
+                        f'any args, pass into {Who.Is(func)} something with logger as '
                         f'data-descriptor or another attribute at first call argument')
                     raise IndexError(msg) from e
 
@@ -622,7 +622,7 @@ class Logging:
                         logger = node.owner.log
 
                     except AttributeError:
-                        who = Who(args[0], full=cls.LOGGING_FULLNAME)
+                        who = Who.Is(args[0], full=cls.LOGGING_FULLNAME)
                         name = f'{who}.{Who.Name(func)}'
                         logger = Logging.get(node, name=name, level=level)
 
@@ -657,7 +657,7 @@ class Logging:
             return method_wrapper
 
         msg = (
-            f'{Who(cls)}.Call receive only one argument: logging.LEVEL '
+            f'{Who.Is(cls)}.Call receive only one argument: logging.LEVEL '
             f'as int | None, not {Who.Is(level)}')
         raise ValueError(msg)
 
@@ -675,7 +675,7 @@ class Logging:
 
             def get_logger(exc, args, kw):
                 head = (
-                    f'.{Who(func)}({Who.Args(*args, **kw)}) hit '
+                    f'.{Who.Is(func)}({Who.Args(*args, **kw)}) hit '
                     f'{exception(exc).reason}')
 
                 if args:
@@ -695,7 +695,7 @@ class Logging:
                 except exceptions as e:
                     logger, head = get_logger(e, args, kw)
 
-                    msg = f'expected exception {Who(e)}:'
+                    msg = f'expected exception {Who.Is(e)}:'
                     if throw:
                         logger.warning(msg)
                         raise
@@ -756,7 +756,7 @@ class Logging:
                 ):
                     raise TypeError(
                         f'{message}, may be you forgot to pass logger as '
-                        f'first positional argument to {Who(func)}?') from e
+                        f'first positional argument to {Who.Is(func)}?') from e
                 raise
 
             if iscoroutinefunction(func):
@@ -984,19 +984,19 @@ class Logging:
         klass = syslog.getLoggerClass()
         if klass is not Logger:
             cls.log.verbose(
-                f'somebody override defined logger {Who(Logger)} '
-                f"with {Who(klass)}{Who.File(klass, 'from %r')}")
+                f'somebody override defined logger {Who.Is(Logger)} '
+                f"with {Who.Is(klass)}{Who.File(klass, 'from %r')}")
             syslog.setLoggerClass(Logger)
 
         if cls is not node:
             logger = cls.log.make_for(node, kw.pop('name', None))
         else:
-            logger = syslog.getLogger(Who(node))
+            logger = syslog.getLogger(Who.Is(node))
 
         if Is.classOf(logger) is not Logger:
             msg = (
-                f"couldn't restore defined logger {Who(Logger)} "
-                f'instead override {Who(klass)}')
+                f"couldn't restore defined logger {Who.Is(Logger)} "
+                f'instead override {Who.Is(klass)}')
             raise TypeError(msg)
 
         if (level := (kw.pop('level', DEPRECATE), DEBUG)[cls.Debugging]):
@@ -1029,7 +1029,7 @@ class Logging:
                         msg = (
                             f'root logger not found in {loggers=} '
                             f'(from {file!s}), set default level '
-                            f'from {Who(cls)}.LOGGING_LEVEL={cls.LOGGING_LEVEL}')
+                            f'from {Who.Is(cls)}.LOGGING_LEVEL={cls.LOGGING_LEVEL}')
 
                         loggers['root'] = {
                             'handlers' : ['stdout'],
@@ -1052,7 +1052,7 @@ class Logging:
         """Compatibility for default .logger behavior"""
 
         log = cls.log
-        log.deprecate(f'-> {Who(cls)}.log', shift=-5, stack=5)
+        log.deprecate(f'-> {Who.Is(cls)}.log', shift=-5, stack=5)
         return log
 
     def from_object(node, **kw):

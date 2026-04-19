@@ -60,7 +60,7 @@ class ConfigurationTypeError(ConfigurationSchemeError, TypeError):
 
 
 def fields_cast(data):
-    return ', '.join(f'({Who(data[k])}){k}' for k in sort(data))
+    return ', '.join(f'({Who.Is(data[k])}){k}' for k in sort(data))
 
 
 @base_dataclass(kw_only=True)
@@ -107,9 +107,9 @@ class dataclass(Logging.Mixin):  # noqa: N801
     def __fields__(cls):
         def make(x):
             if get_origin(x.type) in (Generic, Union, UnionType):
-                name = ' | '.join(map(Who, get_args(x.type)))
+                name = ' | '.join(map(Who.Is, get_args(x.type)))
             else:
-                name = Who(x.type)
+                name = Who.Is(x.type)
 
             factory = x.default_factory
             required = (
@@ -138,7 +138,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
         fields = {f.name: f for f in cls.__fields__}
         if not Is.subclass(cls, dataclass):
             parents = Is.classOf(cls).__mro__
-            msg = f'{Who(cls)} must be a dataclass, {parents=}'
+            msg = f'{Who.Is(cls)} must be a dataclass, {parents=}'
             raise ConfigurationTypeError(msg)
 
         for key, field in fields.items():
@@ -149,8 +149,8 @@ class dataclass(Logging.Mixin):  # noqa: N801
             ):
                 config = json.repr(fields)
                 msg = (
-                    f'{Who(cls)}: ({field.typename}){key} '
-                    f'invalid default value ({Who(value)}), {config=}')
+                    f'{Who.Is(cls)}: ({field.typename}){key} '
+                    f'invalid default value ({Who.Is(value)}), {config=}')
                 raise ConfigurationEvaluationError(msg)
 
         return fields
@@ -174,7 +174,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
             if policy & cls.Policy.Exclude:
                 extra = dict(data)
             else:
-                msg = f'{Who(cls)}[{policy=}]: extra: {fields_cast(data)} passed'
+                msg = f'{Who.Is(cls)}[{policy=}]: extra: {fields_cast(data)} passed'
                 raise ConfigurationEvaluationError(msg)
 
         return {}, extra
@@ -208,7 +208,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
                 except KeyError as e:
                     msg = (
-                        f'{Who(cls)}: ({field.typename}){key} '
+                        f'{Who.Is(cls)}: ({field.typename}){key} '
                         f'required, got {fields_cast(data)}')
                     raise ConfigurationEvaluationError(msg) from e
 
@@ -222,7 +222,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                         result[key] = getattr(data, key)
                     except AttributeError as e:
                         msg = (
-                            f'{Who(cls)}: ({field.typename}){key} '
+                            f'{Who.Is(cls)}: ({field.typename}){key} '
                             f'required, got {fields_cast(data)}')
                         raise ConfigurationEvaluationError(msg) from e
 
@@ -230,7 +230,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
         elif len(args) + 1 != len(fields):
             data = json.repr(data)
-            msg = (f'{Who(cls)}: scheme {len(fields):d} '
+            msg = (f'{Who.Is(cls)}: scheme {len(fields):d} '
                    f"fields ({' '.join(tuple(fields))}) "
                    f"couldn't match to {len(args) + 1:d} "
                    f'taken args: {Who.Args(data, *args)[:1024]}')
@@ -238,7 +238,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
         args = (data, *args)
         if not fields and args:
-            msg = (f"{Who(cls)}: scheme haven't any fields, "
+            msg = (f"{Who.Is(cls)}: scheme haven't any fields, "
                    f'taken args: {Who.Args(args)}')
             raise ConfigurationEvaluationError(msg)
 
@@ -253,7 +253,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                 msg = f'taken args: {Who.Args(data, *args)}'
 
             msg = (
-                f'{Who(cls)}: scheme {required=} '
+                f'{Who.Is(cls)}: scheme {required=} '
                 f"fields ({' '.join(tuple(fields))}) "
                 f"couldn't match to {len(data):d}; {msg}")
             raise ConfigurationEvaluationError(msg)
@@ -303,7 +303,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                         value = field.factory()
                     else:
                         msg = (
-                            f'{Who(cls)}: ({field.typename}){key} '
+                            f'{Who.Is(cls)}: ({field.typename}){key} '
                             f'missing, got: {fields_cast(data)}')
                         raise ConfigurationEvaluationError(msg)
                 else:
@@ -315,12 +315,12 @@ class dataclass(Logging.Mixin):  # noqa: N801
         try:
             if validate and not self.is_valid:
                 data = json.repr(data)[:REPR_LIMIT]
-                self.log.warning(f'{Who(cls)}: invalid data={data}')
+                self.log.warning(f'{Who.Is(cls)}: invalid data={data}')
 
         except ConfigurationError as e:
 
             for message in e.args[1].values():
-                self.log.error(f'{Who(cls)}: {message}')  # noqa: TRY400
+                self.log.error(f'{Who.Is(cls)}: {message}')  # noqa: TRY400
 
             self.log.error(str(e.args[0]))  # noqa: TRY400
             raise
@@ -393,7 +393,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
 
             except AttributeError as e:
                 msg = (
-                    f'{Who(self)}: declared ({Who(key)}){key} required, got {field=}')
+                    f'{Who.Is(self)}: declared ({Who.Is(key)}){key} required, got {field=}')
                 raise ConfigurationEvaluationError(msg) from e
 
             yield key, value
@@ -413,7 +413,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
         if isinstance(other, dict):
             return from_dict({
                 k: v for k, v in self.export.items()
-                if k in other and v == other[k]}, name=Who(other, full=False))
+                if k in other and v == other[k]}, name=Who.Name(other))
 
         elif Is.collection(other):
             ...
@@ -422,13 +422,13 @@ class dataclass(Logging.Mixin):  # noqa: N801
             other = [other]
 
         else:
-            msg = f'{Who.Is(other)} must be dict | str | Iterable | {Who(dataclass)}'
+            msg = f'{Who.Is(other)} must be dict | str | Iterable | {Who.Is(dataclass)}'
             self.log.fatal(msg)
             raise TypeError(msg)
 
         data = self.export
         return from_dict(
-            {k: data[k] for k in set(data) & set(other)}, name=Who(other, full=False))
+            {k: data[k] for k in set(data) & set(other)}, name=Who.Name(other))
 
     def __xor__(self, other):
 
@@ -445,9 +445,9 @@ class dataclass(Logging.Mixin):  # noqa: N801
             export = self.export
             return from_dict({
                 k: export.get(k, other[k])
-                for k, v in set(export) ^ set(other)}, name=Who(other, full=False))
+                for k, v in set(export) ^ set(other)}, name=Who.Name(other))
 
-        msg = f'{Who.Is(other)} must be dict | {Who(dataclass)}'
+        msg = f'{Who.Is(other)} must be dict | {Who.Is(dataclass)}'
         self.log.fatal(msg)
         raise TypeError(msg)
 
@@ -474,13 +474,13 @@ class dataclass(Logging.Mixin):  # noqa: N801
             other = [other]
 
         else:
-            msg = f'{Who.Is(other)} must be dict | str | Iterable | {Who(dataclass)}'
+            msg = f'{Who.Is(other)} must be dict | str | Iterable | {Who.Is(dataclass)}'
             self.log.fatal(msg)
             raise TypeError(msg)
 
         return from_dict(
             {k: v for k, v in self.export.items() if k not in other},
-            name=Who(other, full=False))
+            name=Who.Name(other))
 
     def __or__(self, other):
 
@@ -491,11 +491,11 @@ class dataclass(Logging.Mixin):  # noqa: N801
             other = other.export
 
         else:
-            msg = f'{Who.Is(other)} must be dict | {Who(dataclass)}'
+            msg = f'{Who.Is(other)} must be dict | {Who.Is(dataclass)}'
             self.log.fatal(msg)
             raise TypeError(msg)
 
-        return from_dict(self.export | other, name=Who(other, full=False))
+        return from_dict(self.export | other, name=Who.Name(other))
 
     def __add__(self, other):
 
@@ -530,7 +530,7 @@ class dataclass(Logging.Mixin):  # noqa: N801
                     f'({field.typename}){key} invalid type {Who.Cast(value)}')
 
         if result:
-            msg = f"{Who(self)}: {'; '.join(sort(result))}"
+            msg = f"{Who.Is(self)}: {'; '.join(sort(result))}"
             raise ConfigurationEvaluationError(msg, result)
         return True
 
@@ -576,7 +576,7 @@ def make_auto(field):
                 and owner is get_owner(Is.classOf(self), Field)
             ):
                 self.log.warning(
-                    f"{Who(self)}.{Field}{Who.File(self, '(in %s)')} "
+                    f"{Who.Is(self)}.{Field}{Who.File(self, '(in %s)')} "
                     f"isn't defined, but required because "
                     f"it's {field} schema for instances")
 
@@ -585,19 +585,19 @@ def make_auto(field):
                 and owner != get_owner(Is.classOf(self), field)
             ):
                 self.log.warning(
-                    f'{Who(self)}.{field} property overrided', once=True)
+                    f'{Who.Is(self)}.{field} property overrided', once=True)
 
             elif getattr(self, f'_{field}', Nothing) is Nothing:
                 self.log.warning(
-                    f"{Who(self)}{Who.File(self, 'from %s')} it's class "
-                    f'with dataclass.BaseAutoClass (by {Who(BaseAutoClass)}), '
+                    f"{Who.Is(self)}{Who.File(self, 'from %s')} it's class "
+                    f'with dataclass.BaseAutoClass (by {Who.Is(BaseAutoClass)}), '
                     f'but initialized without {field}={{}} passed to __init__; '
-                    f'{Who(self)}.{field} call now useless', trace=True, shift=-1)
+                    f'{Who.Is(self)}.{field} call now useless', trace=True, shift=-1)
 
             if self in args:
                 where = 'as first arg' if args[0] is self else 'into args'
                 self.log.warning(
-                    f'{Who(self, addr=True)}: self {where} passed',
+                    f'{Who.Is(self, addr=True)}: self {where} passed',
                     trace=True, shift=-1)
 
             try:
@@ -605,13 +605,13 @@ def make_auto(field):
 
             except TypeError:
                 self.log.fatal(
-                    f'{Who(self)}: {Who(super())}'
+                    f'{Who.Is(self)}: {Who.Is(super())}'
                     f'.__init__(*{args=}, **{kw=}) failed')
                 raise
 
     def model(cls):
         msg = (
-            f"{Who(cls)}.{Field}{Who.File(cls, '(from %s)')} "
+            f"{Who.Is(cls)}.{Field}{Who.File(cls, '(from %s)')} "
             f"isn't defined, but required because it's config schema for instances")
         raise TypeError(msg)
 
@@ -619,20 +619,20 @@ def make_auto(field):
         scheme = getattr(self, Field)
 
         if scheme is None:
-            msg = f"{Who(self)}.{Field} isn't defined or None instead dataclass"
+            msg = f"{Who.Is(self)}.{Field} isn't defined or None instead dataclass"
             raise ConfigurationSchemeMissingError(msg)
 
         if not Is.subclass(scheme, dataclass):
-            inheritance = ' -> '.join(map(Who, scheme.__mro_classes__))
-            msg = f'{Who(self)}.{Field} must be dataclass, {inheritance=}'
+            inheritance = ' -> '.join(map(Who.Is, scheme.__mro_classes__))
+            msg = f'{Who.Is(self)}.{Field} must be dataclass, {inheritance=}'
             raise ConfigurationTypeError(msg)
 
         if getattr(self, _field, Nothing) is Nothing:
             classes = [
-                f'{Who(cls)}{Who.File(cls, "(%s)")}'
+                f'{Who.Is(cls)}{Who.File(cls, "(%s)")}'
                 for cls in scheme.__mro_classes__]
             msg = (
-                f'{Who(self)}.{_field} missing, probably you forgot to pass '
+                f'{Who.Is(self)}.{_field} missing, probably you forgot to pass '
                 f'{field} dict as kwarg via super().__init__({field}=), check in '
                 f"{', '.join(classes)}")
             raise ConfigurationSchemeMissingError(msg)
@@ -643,14 +643,14 @@ def make_auto(field):
 
         except Exception as e:
             config = json.repr(config)
-            inheritance = ' -> '.join(map(Who, scheme.__mro_classes__))
+            inheritance = ' -> '.join(map(Who.Is, scheme.__mro_classes__))
             msg = (
-                f"{Who(self)} couldn't load {config} "
+                f"{Who.Is(self)} couldn't load {config} "
                 f'into {scheme=} ({inheritance})')
             if getattr(self, _field, None) is None:
                 msg = (
                     f'{msg}, maybe you forgot to pass {field} as kwarg to '
-                    f'{Who(self, full=False)}({field}=)?')
+                    f'{Who.Name(self)}({field}=)?')
             raise ConfigurationSchemeError(msg) from e
 
         self.log.debug(f'result={result}', once=False)
@@ -724,14 +724,14 @@ def from_dict(*args, **kw):
         args, data = args[1:], args[0]
 
     elif args and isinstance(args[0], dict):
-        classname, data = Who(autoclass), args[0]
+        classname, data = Who.Is(autoclass), args[0]
         args = args[1:]
 
     elif not args and kw:
-        classname, data = Who(autoclass), kw.copy()
+        classname, data = Who.Is(autoclass), kw.copy()
 
     else:
-        msg = f'for {Who(autoclass)}(*{args=}, **{kw=})'
+        msg = f'for {Who.Is(autoclass)}(*{args=}, **{kw=})'
         raise NotImplementedError(msg)
 
     return simple(classname, *data, mro=mro).load(data, *args, **kw)
@@ -759,7 +759,7 @@ def from_module(module, /, order=None, name=None):
         module = required(Str.to_ascii(module))
 
     if not isinstance(module, ModuleType):
-        msg = f'{Who.Is(module)} must be {Who(ModuleType)} or bytes | str'
+        msg = f'{Who.Is(module)} must be {Who.Is(ModuleType)} or bytes | str'
         Logging.get(module).fatal(msg)
         raise TypeError(msg)
 

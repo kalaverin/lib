@@ -94,7 +94,7 @@ def default_serializer(obj, throw=True):
         isinstance(obj, tuple) and
         type(obj).__mro__ == (type(obj), tuple, object)
     ):
-        return (f'<{Who(obj)}>', obj._asdict())
+        return (f'<{Who.Is(obj)}>', obj._asdict())
 
     with suppress(KeyError):
         result = serializers[Is.classOf(obj)](obj)
@@ -119,7 +119,7 @@ def serializer(*classes):
     direct_call = len(classes) == 2 and Is.function(classes[1])  # noqa: PLR2004
 
     def name(obj):
-        return f'{Who(obj, addr=True)} ({Who.File(obj)})'
+        return f'{Who.Addr(obj)} ({Who.File(obj)})'
 
     def serialize(func):
 
@@ -137,15 +137,15 @@ def serializer(*classes):
                     continue
 
                 logger.warning(
-                    f'{Who(cls)} already have registered serializer '
+                    f'{Who.Is(cls)} already have registered serializer '
                     f"{name(serializers[cls])}, can't add another "
                     f'{name(func)}', trace=True, shift=-1)
 
                 continue
             serializers[cls] = func
 
-        title = Who(func)
-        msg = ', '.join(map(Who, order))
+        title = Who.Is(func)
+        msg = ', '.join(map(Who.Is, order))
         if not (direct_call or title.endswith('.<lambda>')):
             msg = f'{msg} -> {title}'
 
@@ -216,7 +216,7 @@ def cast(obj):
         result = to_json({k: cast(v) for k, v in obj.items()})
 
     elif isinstance(obj, tuple) and hasattr(obj, '_fields'):  # namedtuple
-        result = to_json((f'<{Who(obj)}>', obj._asdict()))
+        result = to_json((f'<{Who.Is(obj)}>', obj._asdict()))
 
     elif isinstance(obj, deque | list | set | tuple):
         result = to_json(list(map(cast, obj)))

@@ -1,4 +1,6 @@
 from time import sleep, time
+from typing import Any
+from typing import Callable, Literal
 
 from kain import cache, pin
 
@@ -50,39 +52,39 @@ class Pool(dataclass.config):
         decode_responses         : int = True
 
     @pin.cls.here
-    def DefaultPool(cls):  # noqa: N802
+    def DefaultPool(cls) -> Redis:  # noqa: N802
         return Redis(connection_pool=ConnectionPool(**cls.Config.Defaults))
 
     def __init__(
         self,
         /,
-        client  = None,
-        poll    = 1.0,
-        robust  = True,
-        signal  = None,
-    ):
-        self._client  = client
-        self._poll    = poll
-        self._signal  = signal
-        self._robust  = robust
+        client: Redis | None = None,
+        poll: float = 1.0,
+        robust: bool = True,
+        signal: Callable[[], bool] | None = None,
+    ) -> None:
+        self._client: Redis | None = client
+        self._poll: float = poll
+        self._robust: bool = robust
+        self._signal: Callable[[], bool] | None = signal
 
     @pin
-    def pool(self):
+    def pool(self) -> Callable[[], Redis]:
         return self._client or self.DefaultPool
 
     @pin
-    def condition(self):
+    def condition(self) -> Any | Callable[[], Literal[True]]:
         return self._signal or (lambda: True)
 
     @property
-    def on(self):
+    def on(self) -> Any:
         return self.condition()
 
     #
 
     @property
-    def worker(self):
-        client = self.pool
+    def worker(self) -> Redis:
+        client: Redis = self.pool
         while self._robust:
             try:
                 if client.ping():
@@ -94,28 +96,29 @@ class Pool(dataclass.config):
             sleep(self._poll)
         return client
 
-    def __enter__(self):
+    def __enter__(self) -> Redis:
         return self.worker
 
-    def __exit__(self, *_, **__): ...
+    def __exit__(self, *_, **__) -> None: ...
 
 
 class Event(Pool):
 
     def __init__(
         self,
-        name,
+        name: str,
         /,
-        blocked = True,
-        timeout = None,
-        ttl     = None,
+        blocked: bool = True,
+        timeout: float | int = 0.0,
+        ttl: float | int = 0,
         **kw,
-    ):
+    ) -> None:
         super().__init__(**kw)
-        self.name = name
-        self._ttl     = ttl
-        self._timeout = timeout
-        self._value   = self.integer if blocked else -1
+
+        self.name: str = name
+        self._ttl: int = int(ttl)
+        self._timeout: float = float(timeout)
+        self._value: int = self.integer if blocked else -1
 
     #
 
@@ -142,17 +145,18 @@ class Event(Pool):
     #
 
     @property
-    def updated(self):
+    def updated(self) -> bool:
         return self._value != self.integer
 
-    def down(self):
+    def down(self) -> None:
         self._value = self.integer
 
     #
 
     def changed(
         self,
-        timeout  : float | None = None, /,
+        timeout  : float | None = None,
+        /,
         poll     : float | None = None,
         infinite : bool = True,
     ) -> bool:
@@ -207,7 +211,7 @@ class Event(Pool):
 
 
 @cache
-def Flag(*args, **kw):  # noqa: N802
+def Flag(*args, **kw) -> Event:  # noqa: N802
     return Event(*args, **kw)
 
 
@@ -216,19 +220,21 @@ class Lock(RedisLock):
     def __init__(
         self,
         connector,
-        name, /,
-        timeout = None,
-        signal  = None,
-    ):
-        self.name = name
-        self.client = connector
-        self._signal = signal
-        self._timeout = timeout or 86400 * 365 * 10
+        name: str,
+        /,
+        timeout: int = 0,
+        signal: Callable[[], bool] | None = None,
+    ) -> None:
+        self.name: str = name
+        self.client: Redis = connector
+        self._signal: Callable[[], bool] | None = signal
+        self._timeout: int = timeout or 86400 * 365 * 10
+
         super().__init__(connector, name, blocking_timeout=self._timeout)
 
     @pin
-    def condition(self):
-        return self._signal or (lambda: 1)
+    def condition(self) -> Any | Callable[[], Literal[True]]:
+        return self._signal or (lambda: True)
 
     #
 
@@ -253,6 +259,8 @@ class Lock(RedisLock):
             ):
                 return True
 
+        return False
+
     def acquire(self) -> bool:
         timeout = self._blocking_timeout
         if self._try_acquire():
@@ -272,3 +280,5 @@ class Lock(RedisLock):
 
                 elif self._try_acquire():
                     return True
+
+        return False
