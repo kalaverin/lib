@@ -1,20 +1,28 @@
-# it's just wrapper around xc, but with some additional features
-#
-# home site  https://xcfile.dev
-# source     https://github.com/joerdav/xc
+.PHONY: default help install lint test
 
-CONFIG := $(or $(EXECUTE_FILE), TASKS.md)
-XC := xc -file $(CONFIG)
-export XC
+help:
+	@just default
 
-execute:  # deploy eXeCute tool (xc)
-	go install golang.org/dl/go1.22.6@latest && \
-	go install github.com/joerdav/xc/cmd/xc@latest
+install:
+	@mise trust --yes mise.toml
+	@mise install
 
-#
+lint:
+	@uv run --quiet \
+	  pre-commit run \
+	--config etc/pre-commit.yaml \
+	--all
 
-%: Makefile
-	@$(XC) $@
+test:
+	@PYTHONASYNCIODEBUG=1 \
+	uv run --quiet \
+	pytest \
+		-rs \
+		-svvv \
+		--cov app \
+		--cov-report term-missing
 
+%:
+	@just $@
 
-.DEFAULT_GOAL := publish
+.DEFAULT_GOAL := default
