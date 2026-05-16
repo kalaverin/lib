@@ -1,59 +1,12 @@
 import sys
-from datetime import UTC, datetime, timedelta
 from itertools import cycle
 from math import log2
 from pathlib import Path
 from random import shuffle
-from time import monotonic, time
 
 from setproctitle import setproctitle
 
-from kain import (
-    Missing,
-    class_property,
-    required,
-    to_bytes,
-)
-
-Nothing = Missing()
-
-
-def Now(tz=True, /, **kw):  # noqa: N802
-    if tz:
-        result = datetime.now(tz=UTC if tz is True else tz)
-    else:
-        result = datetime.utcnow()  # noqa: DTZ003
-
-    return (result + timedelta(**kw)) if kw else result
-
-
-def stamp(**kw):
-    return Now(**kw).replace(tzinfo=None).timestamp()
-
-
-class Timer:
-
-    @class_property
-    def now(cls):
-        return time()
-
-    @class_property
-    def stamp(cls):
-        return stamp()
-
-    def __init__(self):
-        self.spent = None
-        self._start = monotonic()
-
-    def __enter__(self):
-        self._start = monotonic()
-
-    def __exit__(self, *args):
-        self.spent = monotonic() - self._start
-
-    @property
-    def delta(self):
-        return monotonic() - self._start if self._start else 0.0
+from kain import required, to_bytes
 
 
 def cycler(array):
@@ -95,7 +48,9 @@ def set_title(title=None, short=True):
         else:
             name = Path(sys.executable).stem
 
-    setproctitle(f"{name} {'' if short else ' '.join(sys.argv[opts:])}".strip())
+    setproctitle(
+        f"{name} {'' if short else ' '.join(sys.argv[opts:])}".strip(),
+    )
 
 
 def fasthash(path, algo="xxhash.xxh128"):
@@ -105,7 +60,7 @@ def fasthash(path, algo="xxhash.xxh128"):
     size = path.stat().st_size
 
     unit_power = 12  # cluster power, modern is 12, 4096 bytes
-    cluster_size = 2 ** unit_power  # cluster size in bytes
+    cluster_size = 2**unit_power  # cluster size in bytes
 
     parts = int(log2(size))  # file parts count
     part_size = int(size / parts)  # every part size
