@@ -1,21 +1,20 @@
 import base64
 from binascii import Error
-from collections import deque, namedtuple
+from collections import deque
 from contextlib import suppress
 from datetime import date, datetime
-from functools import lru_cache
-from keyword import kwlist
+from logging import getLogger
 from pathlib import Path
 from pickle import UnpicklingError
 from pickle import dumps as generic_dumps
 from pickle import loads as generic_loads
 from typing import Any, ClassVar
 
+import base58
 import base2048
 import orjson as json
 from base2048 import DecodeError as EncoderException
-from charded import Str
-from natsort import natsorted
+from charded import Str, string
 from orjson import (
     OPT_INDENT_2,
     OPT_NAIVE_UTC,
@@ -40,9 +39,9 @@ from kain import (
     to_ascii,
     to_bytes,
 )
+from kalib.datetime import format_datetime
 
 __all__ = (
-    "Tuple",
     "dumps",
     "json",
     "loads",
@@ -51,23 +50,23 @@ __all__ = (
 )
 
 BACKENDS = {b"json": "orjson", b"ujson": "orjson"}
-DEADBEEF = b"\xDE\xAD\xBE\xEF"
+DEADBEEF = b"\xde\xad\xbe\xef"
 
 serializers = {}
-logger = Logging.get(__name__)
+logger = getLogger(__name__)
 
 OPT_JSON_FLAGS = (
-    OPT_NAIVE_UTC |
-    OPT_NON_STR_KEYS |
-    OPT_SERIALIZE_DATACLASS |
-    OPT_SERIALIZE_NUMPY |
-    OPT_SERIALIZE_UUID |
-    OPT_SORT_KEYS |
-    OPT_STRICT_INTEGER)
+    OPT_NAIVE_UTC
+    | OPT_NON_STR_KEYS
+    | OPT_SERIALIZE_DATACLASS
+    | OPT_SERIALIZE_NUMPY
+    | OPT_SERIALIZE_UUID
+    | OPT_SORT_KEYS
+    | OPT_STRICT_INTEGER
+)
 
 
-class SerializeError(Exception):
-    ...
+class SerializeError(Exception): ...
 
 
 def default_serializer(obj, throw=True):
@@ -75,13 +74,16 @@ def default_serializer(obj, throw=True):
     if obj is Nothing:
         return None
 
-    if isinstance(obj, date | datetime):
-        # flow for non-orjson setup, intercept for stdlib json.dumps
+    if isinstance(obj, datetime):
+        return format_datetime(obj)
+
+    if isinstance(obj, date):
         return obj.isoformat()
 
-    if (
-        isinstance(obj, tuple) and
-        type(obj).__mro__ == (type(obj), tuple, object)
+    if isinstance(obj, tuple) and type(obj).__mro__ == (
+        type(obj),
+        tuple,
+        object,
     ):
         return (f"<{Who.Is(obj)}>", obj._asdict())
 
@@ -105,7 +107,9 @@ def default_serializer(obj, throw=True):
 
 def serializer(*classes):
 
-    direct_call = len(classes) == 2 and Is.function(classes[1])  # noqa: PLR2004
+    direct_call = len(classes) == 2 and Is.function(
+        classes[1],
+    )
 
     def name(obj):
         return f"{Who.Addr(obj)} ({Who.File(obj)})"
@@ -119,16 +123,16 @@ def serializer(*classes):
                 cls = required(cls)  # noqa: PLW2901
 
             if cls in serializers:
-                if (
-                    Who.Name(serializers[cls]) == Who.Name(func) and
-                    Who.File(serializers[cls]) == Who.File(func)
-                ):
+                if Who.Name(serializers[cls]) == Who.Name(func) and Who.File(
+                    serializers[cls],
+                ) == Who.File(func):
                     continue
 
                 logger.warning(
                     f"{Who.Is(cls)} already have registered serializer "
                     f"{name(serializers[cls])}, can't add another "
-                    f"{name(func)}", trace=True, shift=-1)
+                    f"{name(func)}",
+                )
 
                 continue
             serializers[cls] = func
@@ -138,7 +142,7 @@ def serializer(*classes):
         if not (direct_call or title.endswith(".<lambda>")):
             msg = f"{msg} -> {title}"
 
-        logger.verbose(msg)
+        logger.info(msg)
         return func
 
     return serialize(classes[1]) if direct_call else serialize
@@ -150,16 +154,9 @@ def to_json(func, data, /, **kw):
     minify = kw.pop("minify", True)
     option = kw.pop("option", Nothing)
 
-    if OPT_JSON_FLAGS:
-        # enabled only when orjson used and imported
-        flags = (option or (0x0 if minify else OPT_INDENT_2))
+    if option:
+        flags = option or (0x0 if minify else OPT_INDENT_2)
         kw["option"] = OPT_JSON_FLAGS | flags
-
-    elif option is not Nothing:
-        # intercept orjson option when orjson not available
-        logger.warning(
-            f"{option=} passed, but is not supported by "
-            f"stdlib json, install orjson", trace=True)
 
     elif not minify:
         # stdlib json with indent option
@@ -186,9 +183,9 @@ if OPT_JSON_FLAGS:
 def try_json(data, /, **kw):
     with suppress(Exception):
         if (
-            hasattr(data, "as_dict") and
-            (as_dict := data.as_dict) and
-            isinstance(as_dict, dict)
+            hasattr(data, "as_dict")
+            and (as_dict := data.as_dict)
+            and isinstance(as_dict, dict)
         ):
             data = dict(as_dict)
 
@@ -221,15 +218,14 @@ def cast(obj):
 
 
 class Encoding:
-    Base16 = base64.b16encode, base64.b16decode, "ascii"
-    Base32 = base64.b32encode, base64.b32decode, "ascii"
-    Base64 = base64.b64encode, base64.b64decode, "ascii"
-    Base85 = base64.b85encode, base64.b85decode, "ascii"
-    Base2048 = base2048.encode, base2048.decode, "utf-8"
-    Codecs = [Base16, Base32, Base64, Base85, Base2048]  # noqa: RUF012
 
-    Last = Codecs[-1]
-    Codecs = tuple(Codecs)
+    Base16 = base64.b16encode, base64.b16decode, string.Charset.ASCII
+    Base32 = base64.b32encode, base64.b32decode, string.Charset.ASCII
+    Base58 = base58.b58encode, base58.b58decode, string.Charset.ASCII
+    Base64 = base64.b64encode, base64.b64decode, string.Charset.ASCII
+    Base85 = base64.b85encode, base64.b85decode, string.Charset.ASCII
+    Base2048 = base2048.encode, base2048.decode, string.Charset.UTF8
+    Codecs = (Base16, Base32, Base58, Base64, Base85, Base2048)
 
     Charsets: ClassVar[dict[str, tuple]] = {
         "0123456789ABCDEF": Base16,
@@ -254,12 +250,15 @@ def dumps(value, /, encoder=None, proto=None, ratio=None, charset=None):
         if len(encoder) >= 32 - len(DEADBEEF):
             msg = (
                 f"len({encoder=})={len(encoder):d} "
-                f"must be lower than {32 - len(DEADBEEF):d}")
+                f"must be lower than {32 - len(DEADBEEF):d}"
+            )
             raise ValueError(msg)
 
         module = required(BACKENDS.get(encoder) or encoder)
         value = module.dumps(value)
-        value = encoder + DEADBEEF + to_bytes(value, charset=charset or "utf-8")
+        value = (
+            encoder + DEADBEEF + to_bytes(value, charset=charset or string.Charset.UTF8)
+        )
 
     return compress(value, ratio or 9)
 
@@ -289,20 +288,20 @@ def loads(value, /, expect=None):
     offset = value[:32].find(DEADBEEF)
     if offset != -1:
         encoder = to_bytes(value[:offset])
-        return (
-            required(BACKENDS.get(encoder) or encoder)
-            .loads(value[offset + len(DEADBEEF):]))
+        return required(BACKENDS.get(encoder) or encoder).loads(
+            value[offset + len(DEADBEEF) :],
+        )
 
     with suppress(expect):
         return generic_loads(value)  # noqa: S301
 
 
-def pack(value, *args, codec=Encoding.Last, **kw):
+def pack(value, *args, codec=Encoding.Base2048, **kw):
     """Pack value with codec prefix and encode it with codec"""
 
     return (
-        bytes(hex(Encoding.Codecs.index(codec)), "ascii")[2:] +
-        Str.to_bytes(codec[0](to_bytes(dumps(value, *args, **kw))), codec[2])
+        bytes(hex(Encoding.Codecs.index(codec)), string.Charset.ASCII)[2:]
+        + Str.to_bytes(codec[0](to_bytes(dumps(value, *args, **kw))), codec[2])
     ).decode(codec[2])
 
 
@@ -325,86 +324,12 @@ def unpack(string, *args, **kw):
                 if result:
                     return result
 
-            codec = Encoding.Codecs.index(Encoding.Last)
+            codec = Encoding.Codecs.index(Encoding.Base2048)
             result = unpack(string.__class__(codec) + string, last=True)
             if result:
                 return result
 
         return loads(string, *args, **kw)
-
-
-RESERVED_KEYSET = frozenset(kwlist)
-@lru_cache(2 * 10)
-def namedtuple_builder(*fields, name=None):
-
-    fields_set = set(fields)
-    if len(fields) != len(fields_set):
-        raise ValueError(f"{fields=} must be unique")
-
-    if RESERVED_KEYSET & fields_set:
-        reserved = tuple(natsorted(RESERVED_KEYSET & fields_set))
-        raise ValueError(f"{fields=} must not contain keywords what's {reserved=}")
-
-    return namedtuple(name or "Tuple", fields)
-
-
-def Tuple(*args, **kw):  # noqa: N802
-    name = kw.pop("name", None)
-    rename = kw.pop("rename", False)
-    sort_keys = kw.pop("sort_keys", True)
-
-    if not name and kw and len(args) == 1 and isinstance(args[0], str):
-        # this is: Tuple('MyTuple', **kw)
-        return make_namedtuple(kw, args[0], rename, sort_keys)
-
-    if not kw and len(args) == 1:
-        # this is: Tuple(namedtuple) or Tuple(dict, **kw)
-        return make_namedtuple(args[0], name, rename, sort_keys)
-
-    if (
-        not args and kw  # this is Tuple(**data) style
-    ):
-        if name is None and rename is False and sort_keys is True:
-            # this is: Tuple(**data)
-            return make_namedtuple(kw, name, rename, sort_keys)
-
-        fields = []
-        if name is not None:
-            fields.append(name)
-        if rename is not False:
-            fields.append(rename)
-        if sort_keys is not True:
-            fields.append(sort_keys)
-        fields.sorted()
-
-        raise TypeError(
-            "Tuple() used with **kw style but kw contains "
-            f"Tuple{fields} reserved keys")
-
-    raise TypeError(f"Tuple({Who.Args(*args, **kw)})")
-
-
-def make_namedtuple(
-    data      : dict | tuple,
-    name      : str | None,
-    rename    : bool,
-    sort_keys : bool,
-):
-    if isinstance(data, tuple) and hasattr(data, "_asdict"):
-        return data  # collections.namedtuple itself
-
-    if not isinstance(data, dict):
-        raise TypeError(f"expected dict, got {Who.Is(data)}")
-
-    keys = tuple(natsorted(data) if sort_keys else data)
-
-    if not rename:
-        fields = tuple(keys)
-    else:
-        fields = tuple(f"{k}_" if k in RESERVED_KEYSET else k for k in keys)
-
-    return namedtuple_builder(*fields, name=name)(*map(data.__getitem__, keys))
-
 
 
 @serializer(Path)
