@@ -9,11 +9,11 @@ from kalib.datastructures import json, serializer
 
 
 class Error(NamedTuple):
-    type      : str
-    arguments : tuple | None
-    message   : str | None
-    reason    : str
-    trace     : tuple | None
+    type: str
+    arguments: tuple | None
+    message: str | None
+    reason: str
+    trace: tuple | None
 
     @property
     def as_dict(self):  # typing: ignore[flake8-typing-imports]
@@ -30,7 +30,7 @@ def exception(e):
         return tuple(i.rstrip() for i in x)
 
     arguments = None
-    if (args := getattr(e, "args", None)):
+    if args := getattr(e, "args", None):
         result = []
         for item in args:
             with suppress(Exception):
@@ -55,4 +55,5 @@ def exception(e):
         arguments,
         Str(e).strip() or None,
         reason,
-        trim(format_exception(e)) or None)
+        trim(format_exception(e)) or None,
+    )

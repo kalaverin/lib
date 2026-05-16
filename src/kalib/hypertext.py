@@ -40,7 +40,8 @@ def build_enumerate(name, *order):
     if not isinstance(name, str):
         msg = (
             f"first arg, class name of build_enumerate() "
-            f"must be string, not {Who.Is(name)}")
+            f"must be string, not {Who.Is(name)}"
+        )
         raise TypeError(msg)
 
     types = tuple(set(map(type, order)))
@@ -61,9 +62,9 @@ def build_enumerate(name, *order):
             return "_".join(map(str.upper, order))
 
         order = {
-            titler(code, phrase):
-            (code, phrase, description)
-            for code, phrase, description in order}
+            titler(code, phrase): (code, phrase, description)
+            for code, phrase, description in order
+        }
 
     elif issubclass(types[0], EnumMeta):
         result = {}
@@ -99,9 +100,13 @@ def build_enumerate(name, *order):
 
 
 HTTPStatus = build_enumerate(
-    "HTTPStatus", {
-        i.name: (i.value, i.phrase) + ((i.description,)
-        if i.description else ()) for i in HTTPStatus})
+    "HTTPStatus",
+    {
+        i.name: (i.value, i.phrase)
+        + ((i.description,) if i.description else ())
+        for i in HTTPStatus
+    },
+)
 
 CloudFlare = build_enumerate(
     "CloudFlare",
@@ -112,7 +117,8 @@ CloudFlare = build_enumerate(
     (524, "Cloudflare Timeout", "A timeout occurred"),
     (525, "Cloudflare Handshake Failed", "SSL handshake failed"),
     (526, "Cloudflare Invalid Certificate", "Invalid SSL certificate"),
-    (527, "Cloudflare Railgun Error", "Railgun Listener to origin error"))
+    (527, "Cloudflare Railgun Error", "Railgun Listener to origin error"),
+)
 
 Database = build_enumerate(
     "Database",
@@ -125,38 +131,58 @@ Crawling = build_enumerate(
     (700, "General Failure", "Common error"),
     (701, "Mitigation Hit", "Cloudflare challenge mitigation received"),
     (702, "Temporary Unavailable", "Resource temporary unavailable"),
-    (703, "Still Processing", "Resource temporary unavailable: video compressing, etc"),
+    (
+        703,
+        "Still Processing",
+        "Resource temporary unavailable: video compressing, etc",
+    ),
     (704, "Need Reparse", "Resource unavailable: need to reparse"),
     (705, "Restricted", "Resource unavailable: under age banner"),
-    (706, "Missing Data", "Resource unavailable: missing fields, migration issues"),
-    (707, "Need Subscription", "Resource unavailable: paywall, need account, etc"),
+    (
+        706,
+        "Missing Data",
+        "Resource unavailable: missing fields, migration issues",
+    ),
+    (
+        707,
+        "Need Subscription",
+        "Resource unavailable: paywall, need account, etc",
+    ),
     (708, "Regional Restrictions", "Resource unavailable for current region"),
     (709, "No Valid Source", "Resource unavailable: no valid video format"),
-    (710, "Broken Data", "Resource unavailable: bad bitstream, failed transfer, etc"),
-    (711, "Missing Required Data",
-          "Resource unavailable: missing required data, e.g. duration"),
+    (
+        710,
+        "Broken Data",
+        "Resource unavailable: bad bitstream, failed transfer, etc",
+    ),
+    (
+        711,
+        "Missing Required Data",
+        "Resource unavailable: missing required data, e.g. duration",
+    ),
 )
 
-Status = build_enumerate(
-    "HTTP", HTTPStatus, CloudFlare, Database, Crawling)
+Status = build_enumerate("HTTP", HTTPStatus, CloudFlare, Database, Crawling)
 
 
 class MimeType:
 
-    type : str | None
-    text : str | None
+    type: str | None
+    text: str | None
 
 
 class ResponseInternals:
 
-    url: str | \
-        optional("yarl.URL", default=str) | \
-        optional("httpx.URL", default=str)
+    url: (
+        str
+        | optional("yarl.URL", default=str)
+        | optional("httpx.URL", default=str)
+    )
 
-    status  : int
-    reason  : str | None  # can be None for disk lru_cache
-    headers : dict[str, str]
-    content : bytes | Path  # can be path for disk lru_cache
+    status: int
+    reason: str | None  # can be None for disk lru_cache
+    headers: dict[str, str]
+    content: bytes | Path  # can be path for disk lru_cache
 
 
 def bind_main_classes_as_property(cls):
@@ -172,20 +198,23 @@ class HTTPResponse:
     def read(cls, response, /, **kw):
 
         if (
-            isinstance(response, dict) and
-            isinstance(response.get("headers"), Path) and
-            isinstance(response.get("content"), Path)
+            isinstance(response, dict)
+            and isinstance(response.get("headers"), Path)
+            and isinstance(response.get("content"), Path)
         ):
-            return FileResponse._read(response, response.get("url"), **kw)  # noqa: SLF001
+            return FileResponse._read(
+                response, response.get("url"), **kw,
+            )
 
         if iscoroutine(response):
             msg = f"can't process {response=}, it's coroutine, await it first"
             raise RuntimeError(msg)
 
         order = {
-            HTTPxResponse    : "httpx.Response",
-            RequestsResponse : "requests.models.Response",
-            AioHttpResponse  : "aiohttp.client_reqrep.ClientResponse"}
+            HTTPxResponse: "httpx.Response",
+            RequestsResponse: "requests.models.Response",
+            AioHttpResponse: "aiohttp.client_reqrep.ClientResponse",
+        }
 
         for backend, path in order.items():
             with suppress(ImportError):
@@ -205,16 +234,16 @@ class HTTPResponse:
         result = defaultdict(list)
         for key, value in self._raw.headers.items():
             result[key].append(value)
-        return {
-            k: tuple(v) if len(v) > 1 else v[0] for k, v in result.items()}
+        return {k: tuple(v) if len(v) > 1 else v[0] for k, v in result.items()}
 
     @pin
     def _response_params(self):
         return {
-            "url"     : self._raw.url,
-            "reason"  : self._raw.reason,
-            "headers" : self._headers,
-            "content" : self._content}
+            "url": self._raw.url,
+            "reason": self._raw.reason,
+            "headers": self._headers,
+            "content": self._content,
+        }
 
     @pin
     def _response(self):
@@ -236,10 +265,7 @@ class HTTPResponse:
 
     @pin
     def reason(self):
-        if (
-            (reason := self._response.reason)
-            and reason != "<none>"
-        ):
+        if (reason := self._response.reason) and reason != "<none>":
             return reason
 
         reason = HTTPException.Statuses[self.status]
@@ -265,14 +291,15 @@ class HTTPResponse:
     def mime(self):
         msg = (
             f"could't detect mime-type for {self.url!r} response: "
-            f"{self.headerstring}: {self.content!r}")
+            f"{self.headerstring}: {self.content!r}"
+        )
 
         if not self.content:
             logger.info(msg)
             return MimeType.load({})
 
         try:
-            if (mime := Str(self.content).mime):
+            if mime := Str(self.content).mime:
                 result = MimeType.load(mime)
             else:
                 logger.info(msg)
@@ -283,7 +310,8 @@ class HTTPResponse:
             raise
 
         logger.debug(
-            f"mime-type for {self.url!r} is {result.type!r}, it's {result.text!r} ")
+            f"mime-type for {self.url!r} is {result.type!r}, it's {result.text!r} ",
+        )
         return result
 
     # content related properties
@@ -310,7 +338,9 @@ class HTTPResponse:
 
     @pin
     def pack(self):
-        return required("msgpack.loads")(self.content, encoding="utf-8", use_list=False)
+        return required("msgpack.loads")(
+            self.content, encoding="utf-8", use_list=False,
+        )
 
     @pin
     def xml(self):
@@ -319,28 +349,24 @@ class HTTPResponse:
     # header-based mapping
 
     decoders = {  # noqa: RUF012
-
         # feedparser
-        "application/atom+xml"  : "feed",
-        "application/rdf+xml"   : "feed",
-        "application/x-rss+xml" : "feed",
-        "text/x-opml"           : "feed",
-        "application/rss+xml"   : "feed",
-
+        "application/atom+xml": "feed",
+        "application/rdf+xml": "feed",
+        "application/x-rss+xml": "feed",
+        "text/x-opml": "feed",
+        "application/rss+xml": "feed",
         # lxml html
-        "application/xhtml+xml" : "html",
-        "text/html"             : "html",
-
+        "application/xhtml+xml": "html",
+        "text/html": "html",
         # lxml xml
-        "application/xml"       : "xml",
-        "application/rsd+xml"   : "xml",
-        "text/xml"              : "xml",
-        "xml"                   : "xml",
-
+        "application/xml": "xml",
+        "application/rsd+xml": "xml",
+        "text/xml": "xml",
+        "xml": "xml",
         # other default types
-        "application/json"      : "json",
-        "application/x-msgpack" : "pack",
-        "text/plain"            : "text",
+        "application/json": "json",
+        "application/x-msgpack": "pack",
+        "text/plain": "text",
     }
 
     @pin
@@ -350,7 +376,7 @@ class HTTPResponse:
                 return self.headers.get(x, "").lower().split(";", 1)[0].strip()
 
         for header in ("Content-Type", "content-type"):
-            if (content_type := getter(header)):
+            if content_type := getter(header):
                 return content_type
 
     @pin
@@ -379,8 +405,7 @@ class HTTPResponse:
             return getattr(self, method)
 
         except Exception:
-            message = get_message(
-                f"something went wrong on {method=}")
+            message = get_message(f"something went wrong on {method=}")
             logger.exception(f"by {content_type=}, {message}")
             raise
 
@@ -390,7 +415,8 @@ class AioHttpResponse(HTTPResponse):
     @classmethod
     async def _read(cls, response, /, **kw):
         return HTTPException.catch(
-            cls(response, content=await response.read()), **kw)
+            cls(response, content=await response.read()), **kw,
+        )
 
     @pin
     @parent_call
@@ -403,7 +429,8 @@ class RequestsResponse(HTTPResponse):
     @classmethod
     def _read(cls, response, /, **kw):
         return HTTPException.catch(
-            cls(response, content=response.content), **kw)
+            cls(response, content=response.content), **kw,
+        )
 
     @pin
     @parent_call
@@ -416,16 +443,17 @@ class HTTPxResponse(HTTPResponse):
     @classmethod
     def _read(cls, response, /, **kw):
         return HTTPException.catch(
-            cls(response, content=response.content), **kw)
+            cls(response, content=response.content), **kw,
+        )
 
     @pin
     def _response_params(self):
         return {
-            "url"     : self._raw.url,
-            "content" : self._content,
-            "headers" : self._headers,
-            "reason"  : self._raw.reason_phrase,
-            "status"  : self._raw.status_code,
+            "url": self._raw.url,
+            "content": self._content,
+            "headers": self._headers,
+            "reason": self._raw.reason_phrase,
+            "status": self._raw.status_code,
         }
 
 
@@ -454,11 +482,11 @@ class FileResponse(HTTPResponse):
     def _response_params(self):
         headers = dict(self._raw)
         return {
-            "url"     : headers["url"],
-            "status"  : headers["status"],
-            "headers" : self._headers,
-            "content" : self._content,
-            "reason"  : None,
+            "url": headers["url"],
+            "status": headers["status"],
+            "headers": self._headers,
+            "content": self._content,
+            "reason": None,
         }
 
     @pin
@@ -486,7 +514,9 @@ class HTTPException(Exception):  # noqa: N818
     def scream_to_snake(text):
         return sub(
             r"((^[a-z])|(_[a-z]))",
-            lambda x: x.group(1)[-1].upper(), text.lower())
+            lambda x: x.group(1)[-1].upper(),
+            text.lower(),
+        )
 
     @pin.cls.here
     def exceptions(cls):
@@ -519,7 +549,8 @@ class HTTPException(Exception):  # noqa: N818
 
             postfix = "Error" if offset >= 4 else ""  # noqa: PLR2004
             result[status.value] = type(
-                f"{prefix}{name}{postfix}", (parent,), {"state": status})
+                f"{prefix}{name}{postfix}", (parent,), {"state": status},
+            )
 
             short = name.removeprefix(section)
             setattr(root, short, result[status.value])
@@ -543,7 +574,8 @@ class HTTPException(Exception):  # noqa: N818
             msg = (
                 f"status code should be {Who.Is(Status)} | "
                 f"{Who.Is(HTTPException)} | int, "
-                f"but not {Who.Is(status)}")
+                f"but not {Who.Is(status)}"
+            )
             raise TypeError(msg)
 
         if isinstance(status, HTTPException):
@@ -555,7 +587,8 @@ class HTTPException(Exception):  # noqa: N818
             except KeyError:
                 logger.warning(
                     f"unknown status code in response: "
-                    f"couldn't get {Who.Is(cls)}({status})")
+                    f"couldn't get {Who.Is(cls)}({status})",
+                )
                 if not throw:
                     return HTTPUnknownStatusError
                 raise
@@ -580,21 +613,22 @@ class HTTPException(Exception):  # noqa: N818
 
             raise ValueError(
                 f"include/exclude can only contains int | {Who.Is(HTTPException)}, "
-                f"not {Who.Is(x)} which passed")
+                f"not {Who.Is(x)} which passed",
+            )
 
         # always raise included exceptions
 
-        if (include and (
+        if include and (
             isinstance(include, int) or issubclass(include, HTTPException)
-        )):
+        ):
             include = (include,)
         include = tuple(map(to_int, include or ()))
 
         # do not raise excluded exceptions
 
-        if (exclude and (
+        if exclude and (
             isinstance(exclude, int) or issubclass(exclude, HTTPException)
-        )):
+        ):
             exclude = (exclude,)
         exclude = tuple(map(to_int, exclude or ()))
 
@@ -602,7 +636,9 @@ class HTTPException(Exception):  # noqa: N818
         if code in (exclude or ()):
             return response
 
-        if code // 100 >= 4 or code in (include or ()):  # noqa: PLR2004, raise all >=400
+        if code // 100 >= 4 or code in (
+            include or ()
+        ):
             e = cls.by_code(code)(response)
             if handler and (replace := handler(e, response)):
                 raise replace
@@ -631,8 +667,8 @@ class HTTPException(Exception):  # noqa: N818
 
         try:
             return (
-                f"{response.url=}\n"
-                f"{json.repr(response.headers)=}\n{body=}")
+                f"{response.url=}\n{json.repr(response.headers)=}\n{body=}"
+            )
 
         except Exception:
             logger.exception(f"something went wrong with {response=}")
@@ -641,11 +677,11 @@ class HTTPException(Exception):  # noqa: N818
     def __str__(self):
         return (
             f"{self.response.status:d} {self.response.reason} "
-            f"{self.response.url}")
+            f"{self.response.url}"
+        )
 
 
-class HTTPUnknownStatusError(HTTPException):
-    ...
+class HTTPUnknownStatusError(HTTPException): ...
 
 
 @proxy_to("generator", "random")
@@ -690,7 +726,8 @@ class Cookies:
         if not isinstance(key, bytes | str):
             msg = (
                 f"accept only bytes | str as environment "
-                f"variable key, not {Who.Is(key)}")
+                f"variable key, not {Who.Is(key)}"
+            )
             logger.fatal(msg)
             raise TypeError(msg)
 
@@ -711,7 +748,8 @@ class Cookies:
         if not isinstance(path, bytes | str):
             msg = (
                 f"accept only bytes | str as filesystem "
-                f"path, not {Who.Is(path)}")
+                f"path, not {Who.Is(path)}"
+            )
             logger.fatal(msg)
             raise TypeError(msg)
 
@@ -767,7 +805,9 @@ class Cookies:
         def iter_values():
             for line in iter_tokens():
                 match = split(r"([\s=]+)", line, maxsplit=1)
-                if len(match) == 3 and match[0] not in self.skip_keys:  # noqa: PLR2004
+                if (
+                    len(match) == 3 and match[0] not in self.skip_keys
+                ):
                     yield f"{match[0]}={match[2]}"
 
         cookie = None
@@ -775,7 +815,7 @@ class Cookies:
 
         for line in natsorted(iter_values()):
             cookie = f"{cookie}; {line}" if cookie else line
-            if len(cookie) >= 2 ** 10:
+            if len(cookie) >= 2**10:
                 result.load(cookie)
                 cookie = None
 
@@ -786,7 +826,9 @@ class Cookies:
 
     @pin
     def as_data(self):
-        return tuple(natsorted(i.OutputString() for i in self.cookies.values()))
+        return tuple(
+            natsorted(i.OutputString() for i in self.cookies.values()),
+        )
 
     @pin
     def as_dict(self):
@@ -809,18 +851,19 @@ def proxy_to_super(func):
     @wraps(func)
     def wrapper(self, other):
         return self.load(func(self)(other).as_dict)
+
     return wrapper
 
 
 class URL(dataclass):
-    scheme   : str
-    host     : str | int
-    port     : str | int | None = None
-    user     : str | None = None
-    password : str | None = None
-    path     : str | None = "/"
-    query    : str = ""
-    fragment : str = ""
+    scheme: str
+    host: str | int
+    port: str | int | None = None
+    user: str | None = None
+    password: str | None = None
+    path: str | None = "/"
+    query: str = ""
+    fragment: str = ""
 
     @pin.cls
     def subclass(cls):
@@ -829,12 +872,12 @@ class URL(dataclass):
     @pin.cls
     def default_ports(cls):
         return {
-            "http"  : 80,
-            "ftp"   : 21,
-            "ssh"   : 22,
-            "https" : 443,
-            "amqp"  : 5672,
-            "redis" : 6379,
+            "http": 80,
+            "ftp": 21,
+            "ssh": 22,
+            "https": 443,
+            "amqp": 5672,
+            "redis": 6379,
         }
 
     @classmethod
@@ -846,9 +889,12 @@ class URL(dataclass):
                 del config["path"]
 
         if (
-            port and
-            (isinstance(port, int) or (isinstance(port, str) and port.isdigit())) and
-            (port := int(port)) >= 0
+            port
+            and (
+                isinstance(port, int)
+                or (isinstance(port, str) and port.isdigit())
+            )
+            and (port := int(port)) >= 0
         ):
             with suppress(KeyError):
                 if cls.default_ports[config["scheme"].lower()] == port:
@@ -866,20 +912,21 @@ class URL(dataclass):
 
         with suppress(KeyError):
             userattr = {
-                "furl.furl.furl" : "username",
-                "yarl.URL"       : "user",
+                "furl.furl.furl": "username",
+                "yarl.URL": "user",
             }[Who.Is(config)]
 
             port = config.port or None
             config = {
-                "scheme"  : str(config.scheme).lower(),
-                "user"    : getattr(config, userattr),
+                "scheme": str(config.scheme).lower(),
+                "user": getattr(config, userattr),
                 "password": config.password,
-                "host"    : config.host,
-                "port"    : port,
-                "path"    : str(config.path or ""),
-                "query"   : config.query_string or "",
-                "fragment": config.fragment or ""}
+                "host": config.host,
+                "port": port,
+                "path": str(config.path or ""),
+                "query": config.query_string or "",
+                "fragment": config.fragment or "",
+            }
 
             return cls.clean_kwargs(config)
 
@@ -888,14 +935,15 @@ class URL(dataclass):
     @pin
     def as_dict(self):
         return {
-            "scheme"   : self.scheme,
-            "user"     : self.user,
-            "password" : self.password,
-            "host"     : self.host,
-            "port"     : self.port,
-            "path"     : self.path,
-            "query"    : self.query,
-            "fragment" : self.fragment}
+            "scheme": self.scheme,
+            "user": self.user,
+            "password": self.password,
+            "host": self.host,
+            "port": self.port,
+            "path": self.path,
+            "query": self.query,
+            "fragment": self.fragment,
+        }
 
     @pin
     def url(self):
@@ -924,11 +972,13 @@ class URL(dataclass):
     def __add__(self):  # noqa: PLE0302
         return super().__add__
 
+
 # make all exceptions for easy imports at start time
 
 
 for exception in HTTPException.exceptions.values():
     locals()[exception.__name__] = exception
+
 
 @serializer(HTTPException)
 def from_http(something):

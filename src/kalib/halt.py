@@ -6,5 +6,5 @@ from kalib import halt
 import sys
 from logging import getLogger
 
-getLogger(__name__).exception('halt')
+getLogger(__name__).exception("halt")
 sys.exit(127)

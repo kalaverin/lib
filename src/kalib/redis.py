@@ -22,27 +22,28 @@ class Pool:
         redis.exceptions.ClusterDownError,
         redis.exceptions.ConnectionError,
         redis.exceptions.TimeoutError,
-        redis.exceptions.TryAgainError)
+        redis.exceptions.TryAgainError,
+    )
 
     class Config:
 
-        host                     : str = "localhost"
-        port                     : int = 6379
-        db                       : int = 0
-        password                 : str | None = None
+        host: str = "localhost"
+        port: int = 6379
+        db: int = 0
+        password: str | None = None
 
-        socket_timeout           : float | int = 5
-        socket_connect_timeout   : float | int = 5
-        socket_keepalive         : bool = True
-        socket_keepalive_options : dict | None = None
+        socket_timeout: float | int = 5
+        socket_connect_timeout: float | int = 5
+        socket_keepalive: bool = True
+        socket_keepalive_options: dict | None = None
 
-        max_connections          : int = 50
-        retry_on_timeout         : bool = True
-        health_check_interval    : int = 30
+        max_connections: int = 50
+        retry_on_timeout: bool = True
+        health_check_interval: int = 30
 
-        encoding                 : str = "utf-8"
-        encoding_errors          : str = "strict"
-        decode_responses         : int = True
+        encoding: str = "utf-8"
+        encoding_errors: str = "strict"
+        decode_responses: int = True
 
     @pin.cls.here
     def DefaultPool(cls) -> Redis:  # noqa: N802
@@ -72,7 +73,6 @@ class Pool:
     @property
     def on(self) -> Any:
         return self.condition()
-
 
     @property
     def worker(self) -> Redis:
@@ -112,7 +112,6 @@ class Event(Pool):
         self._timeout: float = float(timeout)
         self._value: int = self.integer if blocked else -1
 
-
     def up(self, ttl: int = 0) -> int:
         with self as cli:
             result = cli.incr(self.name)
@@ -133,7 +132,6 @@ class Event(Pool):
     def integer(self) -> int:
         return int(self.value or 0)
 
-
     @property
     def updated(self) -> bool:
         return self._value != self.integer
@@ -141,13 +139,12 @@ class Event(Pool):
     def down(self) -> None:
         self._value = self.integer
 
-
     def changed(
         self,
-        timeout  : float | None = None,
+        timeout: float | None = None,
         /,
-        poll     : float | None = None,
-        infinite : bool = True,
+        poll: float | None = None,
+        infinite: bool = True,
     ) -> bool:
         counter = 0
         start = time()
@@ -168,7 +165,8 @@ class Event(Pool):
                 if counter:
                     self.log.debug(
                         f"{self.name}: {self._value} -> {value} "
-                        f"({delta:0.2f}s)")
+                        f"({delta:0.2f}s)",
+                    )
                 self._value = value
                 return True
 
@@ -227,7 +225,6 @@ class Lock(RedisLock):
     def condition(self) -> Any | Callable[[], Literal[True]]:
         return self._signal or (lambda: True)
 
-
     def _try_acquire(self) -> bool:
         return self._client.set(self.name, self.token, nx=True, ex=self._ex)
 
@@ -237,7 +234,8 @@ class Lock(RedisLock):
         while condition():
 
             message = pubsub.get_message(
-                ignore_subscribe_messages=True, timeout=timeout)
+                ignore_subscribe_messages=True, timeout=timeout,
+            )
 
             if not message and deadline < time():
                 return False
