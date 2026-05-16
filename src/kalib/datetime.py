@@ -54,7 +54,6 @@ def format_datetime(dt: datetime) -> str:
 
 
 class Timer:
-    _spent: float
 
     @class_property
     def ISO(cls) -> str:
@@ -69,6 +68,7 @@ class Timer:
         return stamp()
 
     def __init__(self) -> None:
+        self._spent: float = 0.0
         self._start: float = monotonic()
 
     def __enter__(self):
