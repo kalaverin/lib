@@ -2,9 +2,9 @@ set dotenv-load := true
 set positional-arguments := true
 
 DATETIME := `TZ=UTC date '+%Y-%m-%d %H:%M:%S'`
-STAGING := env('STAGING', 'crypto-1')
-DOCKER_TAG := env('DOCKER_TAG', 'crypto/analytics-wf')
-BASE_IMAGE := env('BASE_IMAGE', 'europe-west4-docker.pkg.dev/myexlab-ops/python/python:py-3.12.12-slim-trixie-feodor-uv')
+STAGING := env('STAGING', 'example')
+DOCKER_TAG := env('DOCKER_TAG', 'default/example')
+BASE_IMAGE := env('BASE_IMAGE', 'python:3.12')
 
 UV_INDEX_PRIVATE_USERNAME := env('UV_INDEX_PRIVATE_USERNAME', '__token__')
 UV_INDEX_PRIVATE_PASSWORD := env('UV_INDEX_PRIVATE_PASSWORD', '')
@@ -31,17 +31,12 @@ migrate:
 [group('maintenance')]
 clean:
     @rm -rf .*_cache/
-    @find . -type d -name "__pycache__" -exec rm -rf {} +
-    @find . -type f -name "*.pyc" -exec rm -f {} +
+    @find . -type d -name "__pycache__" -delete
+    @find . -type f -name "*.pyc" -delete
 
 # upgrade dependencies graph
 [group('packaging')]
 upgrade:
-    @echo "upgrading mise dependencies.."
-    @mise upgrade \
-        --quiet \
-        --yes \
-
     @echo "updating pre-commit hooks.."
     @uv run --quiet \
     pre-commit autoupdate \
@@ -62,10 +57,10 @@ upgrade:
 # publish package to repository
 [group('packaging')]
 publish:
-	@rm -rf dist/ || true
-	@uv build
-	@uv run uv-publish --repo kain
-	@rm -rf dist/ || true
+    @rm -rf dist/ || true
+    @uv build
+    @uv run uv-publish --repo kain
+    @rm -rf dist/ || true
 
 # build docker image
 [group('packaging')]

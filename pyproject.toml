@@ -12,30 +12,38 @@ development = [
   "async-asgi-testclient>=1.4.11",
   "bandit[toml]>=1.9.4",
   "basedmypy>=2.10.0",
-  "basedpyright>=1.39.0",
+  "basedpyright>=1.39.4",
   "better-exceptions>=0.3.3",
   "black>=26.3.1",
   "colorama>=0.4.6",
-  "grpcio-reflection>=1.71.2",
+  "faker>=40.18.0",
   "hexora>=0.2.4",
-  "mypy>=1.19.1,<1.20.0",
-  "pre-commit>=4.5.1",
+  "pre-commit>=4.6.0",
+  "pyrefly>=1.0.0",
   "pytest-asyncio>=1.3.0",
+  "pytest-check>=2.8.0",
+  "pytest-clarity>=1.0.1",
   "pytest-cov>=7.1.0",
   "pytest-dotenv>=0.5.2",
+  "pytest-icdiff>=0.9",
   "pytest-mock>=3.15.1",
+  "pytest-randomly>=4.1.0",
   "pytest-timeout>=2.4.0",
-  "pytest>=9.0.2",
+  "pytest-xdist>=3.8.0",
+  "pytest>=9.0.3",
   "python-lsp-server[all]>=1.14.0",
-  "refurb>=2.3.0",
-  "ruff>=0.15.8",
+  "refurb>=2.3.1",
+  "righttyper>=0.1.0",
+  "ruff>=0.15.13",
   "structlog>=25.5.0",
-  "ty>=0.0.27",
+  "time-machine>=3.2.0",
+  "ty>=0.0.36",
   "typing-extensions>=4.15.0",
   "typing-inspection>=0.4.2",
+  "uv-publish>=1.4",
   "vulture>=2.16",
   "yamlfix>=1.19.1",
-  "yamllint>=1.38.0",
+  "yamllint>=1.38.0"
 ]
 documentation = [
   "sphinx>=8.1.3",
@@ -49,9 +57,7 @@ authors = [
   {name = "Alex Kalaverin", email = "alex@kalaver.in"}
 ]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
-  "Topic :: Software Development :: Libraries :: Python Modules",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
@@ -60,8 +66,23 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "charded",
-  "kain",
+  "base2048>=0.1.3",
+  "charded>=1.0.0,<2",
+  "fake-useragent>=2.2.0",
+  "feedparser>=6.0.11",
+  "hiredis>=3.2.1",
+  "kain>=1.1.3,<2",
+  "lxml>=5.4.0",
+  "msgpack>=1.1.0",
+  "natsort>=8.4.0",
+  "orjson>=3.10.16",
+  "pydantic>=2.11.7",
+  "redis>=6.2.0",
+  "redis-lock-py>=1.2.0",
+  "setproctitle>=1.3.7",
+  "xxhash>=3.5.0",
+  "yarl>=1.20.0",
+  "zstd>=1.5.6.7",
 ]
 description = "A comprehensive set of advanced utilities for Python programming, e.g. HTTP communication, string handling, logging enhancements, introspection, dynamic importing, property caching descriptors, data class extensions, serialization, etc."
 keywords = [
@@ -80,31 +101,10 @@ keywords = [
 name = "kalib"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
-version = "0.23.0"
+version = "1.0.0"
 
 [project.license]
 text = "BSD License"
-
-[project.optional-dependencies]
-data = [
-  "base2048>=0.1.3",
-  "fake-useragent>=2.2.0",
-  "feedparser>=6.0.11",
-  "lxml>=5.4.0",
-  "msgpack>=1.1.0",
-  "yarl>=1.20.0"
-]
-redis = [
-  "hiredis>=3.2.1",
-  "redis-lock-py>=1.1.1",
-  "redis>=6.2.0"
-]
-usual = [
-  "natsort>=8.4.0",
-  "orjson>=3.10.16",
-  "xxhash>=3.5.0",
-  "zstd>=1.5.6.7"
-]
 
 [tool.bandit]
 exclude_dirs = [".venv", ".git"]
@@ -146,17 +146,13 @@ known-third-party = [
 "src/*" = []
 "tests/*" = ["S101", "PLR2004", "ERA001", "INP001"]
 
-[tool.setuptools]
-packages = ["kalib"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-[tool.setuptools.package-dir]
-"" = "src"
+[tool.ty.rules]
+possibly-missing-attribute = "ignore"
 
 [tool.uv]
 default-groups = [
   "development"
 ]
-
-[tool.uv.sources]
-charded = { git = "ssh://git@github.com/kalaverin/charded.git", rev = "83f991c3f1f9cbf3b034fe79b657307f359a8822" }
-kain = { git = "ssh://git@github.com/kalaverin/kain.git", rev = "b582c3f" }

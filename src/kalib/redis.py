@@ -1,26 +1,19 @@
+from collections.abc import Callable
+from functools import lru_cache
 from time import sleep, time
-from typing import Any
-from typing import Callable, Literal
+from typing import Any, Literal
 
-from kain import cache, pin
+import redis.exceptions
+from redis import Redis
+from redis.client import PubSub
+from redis.connection import ConnectionPool
+from redis_lock import RedisLock
 
+from kain import pin
 from kalib import exception
-from kalib.dataclass import dataclass
-
-try:
-    import redis.exceptions
-    from redis import Redis
-    from redis.client import PubSub
-    from redis.connection import ConnectionPool
-    from redis_lock import RedisLock
-
-except ImportError as e:
-    raise ImportError(
-        'redis & redis_lock is required, install kalib[redis]'
-    ) from e
 
 
-class Pool(dataclass.config):
+class Pool:
 
     Recoverable = (
         ConnectionRefusedError,
@@ -31,9 +24,9 @@ class Pool(dataclass.config):
         redis.exceptions.TimeoutError,
         redis.exceptions.TryAgainError)
 
-    class Config(dataclass):
+    class Config:
 
-        host                     : str = 'localhost'
+        host                     : str = "localhost"
         port                     : int = 6379
         db                       : int = 0
         password                 : str | None = None
@@ -47,8 +40,8 @@ class Pool(dataclass.config):
         retry_on_timeout         : bool = True
         health_check_interval    : int = 30
 
-        encoding                 : str = 'utf-8'
-        encoding_errors          : str = 'strict'
+        encoding                 : str = "utf-8"
+        encoding_errors          : str = "strict"
         decode_responses         : int = True
 
     @pin.cls.here
@@ -80,7 +73,6 @@ class Pool(dataclass.config):
     def on(self) -> Any:
         return self.condition()
 
-    #
 
     @property
     def worker(self) -> Redis:
@@ -109,8 +101,8 @@ class Event(Pool):
         name: str,
         /,
         blocked: bool = True,
-        timeout: float | int = 0.0,
-        ttl: float | int = 0,
+        timeout: float = 0.0,
+        ttl: float = 0,
         **kw,
     ) -> None:
         super().__init__(**kw)
@@ -120,7 +112,6 @@ class Event(Pool):
         self._timeout: float = float(timeout)
         self._value: int = self.integer if blocked else -1
 
-    #
 
     def up(self, ttl: int = 0) -> int:
         with self as cli:
@@ -142,7 +133,6 @@ class Event(Pool):
     def integer(self) -> int:
         return int(self.value or 0)
 
-    #
 
     @property
     def updated(self) -> bool:
@@ -151,7 +141,6 @@ class Event(Pool):
     def down(self) -> None:
         self._value = self.integer
 
-    #
 
     def changed(
         self,
@@ -178,8 +167,8 @@ class Event(Pool):
 
                 if counter:
                     self.log.debug(
-                        f'{self.name}: {self._value} -> {value} '
-                        f'({delta:0.2f}s)')
+                        f"{self.name}: {self._value} -> {value} "
+                        f"({delta:0.2f}s)")
                 self._value = value
                 return True
 
@@ -200,17 +189,19 @@ class Event(Pool):
             if self.integer:
                 delta = time() - start
                 if counter:
-                    self.log.debug(f'{self.name} ({delta:0.2f}s)')
+                    self.log.debug(f"{self.name} ({delta:0.2f}s)")
                 return True
 
             sleep(wait)
             counter += 1
 
+        return False
+
     __call__ = changed
     __bool__ = non_zero
 
 
-@cache
+@lru_cache
 def Flag(*args, **kw) -> Event:  # noqa: N802
     return Event(*args, **kw)
 
@@ -236,7 +227,6 @@ class Lock(RedisLock):
     def condition(self) -> Any | Callable[[], Literal[True]]:
         return self._signal or (lambda: True)
 
-    #
 
     def _try_acquire(self) -> bool:
         return self._client.set(self.name, self.token, nx=True, ex=self._ex)
@@ -252,10 +242,10 @@ class Lock(RedisLock):
             if not message and deadline < time():
                 return False
 
-            elif (
+            if (
                 message
-                and message['type'] == 'message'
-                and message['data'] == self.unlock_message
+                and message["type"] == "message"
+                and message["data"] == self.unlock_message
             ):
                 return True
 
@@ -278,7 +268,7 @@ class Lock(RedisLock):
                 if deadline < time():
                     return False
 
-                elif self._try_acquire():
+                if self._try_acquire():
                     return True
 
         return False

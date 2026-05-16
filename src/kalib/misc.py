@@ -1,18 +1,16 @@
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from itertools import cycle
 from math import log2
 from pathlib import Path
 from random import shuffle
-from sys import version_info
 from time import monotonic, time
 
+from setproctitle import setproctitle
+
 from kain import (
-    Is,
     Missing,
-    cache,
     class_property,
-    proxy_to,  # noqa: F401
     required,
     to_bytes,
 )
@@ -20,28 +18,9 @@ from kain import (
 Nothing = Missing()
 
 
-@cache
-def get_toml_loader():
-    if version_info >= (3, 11):
-        from tomllib import load  # noqa: PLC0415
-    else:
-        try:
-            from tomli import load  # noqa: PLC0415
-        except ImportError as e:
-            raise ImportError('install "tomli" or upgrade to Python 3.11+') from e
-    return load
-
-
 def Now(tz=True, /, **kw):  # noqa: N802
-    """Return datetime object with or without timezone.
-
-    When tz passed, it's used, when not tz — timezone-naive datetime returned.
-
-    Also keywargs can be passed to timedelta, so you can get datetime in the future.
-    """
-
     if tz:
-        result = datetime.now(tz=timezone.utc if tz is True else tz)
+        result = datetime.now(tz=UTC if tz is True else tz)
     else:
         result = datetime.utcnow()  # noqa: DTZ003
 
@@ -49,12 +28,10 @@ def Now(tz=True, /, **kw):  # noqa: N802
 
 
 def stamp(**kw):
-    """Return timestamp with timedelta keywargs with timezone support."""
     return Now(**kw).replace(tzinfo=None).timestamp()
 
 
 class Timer:
-    """Context manager to measure time spent in block."""
 
     @class_property
     def now(cls):
@@ -65,8 +42,8 @@ class Timer:
         return stamp()
 
     def __init__(self):
-        self._start = None
         self.spent = None
+        self._start = monotonic()
 
     def __enter__(self):
         self._start = monotonic()
@@ -79,31 +56,12 @@ class Timer:
         return monotonic() - self._start if self._start else 0.0
 
 
-def to_tuple(x):
-    return tuple(x or ()) if Is.iterable(x) else (x,)
-
-
-def toml_read(path):
-    loader = get_toml_loader()
-    with Path(path).open('rb') as fd:
-        return loader(fd)
-
-
-def yaml_read(path):
-    loader = required('yaml.safe_load')
-    with Path(path).open('rb') as fd:
-        return loader(fd.read())
-
-
 def cycler(array):
-    """Return a function that cycles through the given array."""
     iterator = cycle(array)
     return lambda: next(iterator)
 
 
 def shuffler(iterable):
-    """Return a function that shuffles the given array."""
-
     if len(iterable) < 3:  # noqa: PLR2004
         return cycler(iterable)
 
@@ -126,25 +84,21 @@ def shuffler(iterable):
 def set_title(title=None, short=True):
 
     opts = 0
-    func = required('setproctitle.setproctitle')
 
     if title:
         name = title
     else:
         script = sys.argv[0]
-        if script.endswith('.py'):
+        if script.endswith(".py"):
             opts = 1
             name = Path(script).stem
         else:
             name = Path(sys.executable).stem
 
-    func(f"{name} {'' if short else ' '.join(sys.argv[opts:])}".strip())
+    setproctitle(f"{name} {'' if short else ' '.join(sys.argv[opts:])}".strip())
 
 
-@cache(2 ** 10)
-def fasthash(path, algo='xxhash.xxh128'):
-    """Generate fast cache by file content according to sector size."""
-
+def fasthash(path, algo="xxhash.xxh128"):
     hasher = required(algo)()
 
     path = Path(path)
@@ -157,7 +111,7 @@ def fasthash(path, algo='xxhash.xxh128'):
     part_size = int(size / parts)  # every part size
     cluster = 2 ** min(12, int(log2(part_size)))  # read block size
 
-    with path.open('rb') as fd:
+    with path.open("rb") as fd:
         hasher.update(to_bytes(str(size)))
         for no in range(parts):
 
@@ -169,5 +123,4 @@ def fasthash(path, algo='xxhash.xxh128'):
 
 
 def is_python_runtime():
-    """Checks if current runtime is Python, not Nuitka or PyInstaller."""
     return Path(sys.executable).is_file()

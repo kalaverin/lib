@@ -1,14 +1,13 @@
 {
   "include": [
-    "../../app/"
+    "../../src/kalib/"
   ],
   "exclude": [
     "**/.*",
     "**/__pycache__/"
   ],
   "ignore": [
-    "../../app/settings.py",
-    "../../app/zitadel/client.py"
+    "../../src/kalib/settings.py"
   ],
   "executionEnvironments": [
     {

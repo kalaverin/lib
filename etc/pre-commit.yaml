@@ -7,22 +7,16 @@ fail_fast: true
 repos:
   - repo: local
     hooks:
-      - id: lockfile-check
-        name: check what dependencies are being added to the lockfile
-        entry: uv lock --check
-        language: system
-        pass_filenames: false
-
       - id: lint-black
         name: force black
-        entry: uv run --quiet black --quiet --line-length 79 --target-version py312
-          'src/' 'tests/'
+        entry: uv run --quiet black --diff --color --quiet --line-length 79 --target-version
+          py312 'src/' 'tests/'
         language: system
         pass_filenames: false
 
       - id: lint-ruff
         name: force ruff
-        entry: uv run --quiet ruff check --fix --quiet 'src/' 'tests/'
+        entry: uv run --quiet ruff check --quiet 'src/' 'tests/'
         language: system
         pass_filenames: false
 
@@ -37,6 +31,12 @@ repos:
         name: check yaml
         entry: uv run --quiet yamllint --format parsable --config-file etc/lint/yamllint.yaml
           .
+        language: system
+        pass_filenames: false
+
+      - id: check-pyrefly
+        name: check pyrefly (bad code detection)
+        entry: uv run --quiet pyrefly check --config etc/lint/pyrefly.toml src
         language: system
         pass_filenames: false
 
@@ -62,7 +62,7 @@ repos:
       - id: check-refurb
         name: check refurb (bad solutions detection)
         entry: uv run --quiet refurb --quiet --enable-all --python-version 3.12 --config-file
-          pyproject.toml --sort filename 'src/' -- --show-traceback
+          pyproject.toml --sort filename 'src/' -- --config-file etc/lint/mypy.toml
         language: system
         pass_filenames: false
 
@@ -200,8 +200,3 @@ repos:
         args:
           - --line-length
           - '79'
-  - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.2
-    hooks:
-      - id: uv-lock
-        name: sync pyproject.toml and lock project dependencies to uv.lock

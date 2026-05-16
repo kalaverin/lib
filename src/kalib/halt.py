@@ -4,8 +4,7 @@ from kalib import halt
 """
 
 import sys
+from logging import getLogger
 
-from kalib.loggers import Logging
-
-Logging.get(__name__).exception('halt', trace=True, shift=-2, stack=2)
+getLogger(__name__).exception('halt')
 sys.exit(127)

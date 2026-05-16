@@ -36,7 +36,7 @@ from kalib.exceptions import (
     exception,
 )
 from kalib.hypertext import (
-    HTTP,
+    Status,
 )
 from kalib.loggers import (
     Logging,

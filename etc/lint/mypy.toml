@@ -1,8 +1,6 @@
 [tool.mypy]
 cache_fine_grained = true
 disable_error_code = [
-  # we also override attributes (variables) from base classes with Any
-  "misc"
 ]
 # using Any type in return for decorated (e.g. @property) functions
 disallow_any_decorated = false
@@ -18,8 +16,5 @@ follow_imports = "silent"
 follow_imports_for_stubs = true
 # many modules have no stubs, skip these errors
 ignore_missing_imports = true
+mypy_path = "src"
 plugins = ["pydantic.mypy"]
-
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = ["tests.*"]

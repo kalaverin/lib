@@ -3,8 +3,8 @@ from traceback import format_exception
 from typing import NamedTuple
 
 from charded import Str
-from kain import Who
 
+from kain import Who
 from kalib.datastructures import json, serializer
 
 
@@ -30,7 +30,7 @@ def exception(e):
         return tuple(i.rstrip() for i in x)
 
     arguments = None
-    if (args := getattr(e, 'args', None)):
+    if (args := getattr(e, "args", None)):
         result = []
         for item in args:
             with suppress(Exception):
@@ -46,12 +46,12 @@ def exception(e):
 
         arguments = tuple(result)
 
-    reason = f'{Who(e)}({json.repr(arguments)[1:-1]})'
-    if message := getattr(e, 'message', '').strip():
-        reason = f'{reason}: {message}'
+    reason = f"{Who.Is(e)}({json.repr(arguments)[1:-1]})"
+    if message := getattr(e, "message", "").strip():
+        reason = f"{reason}: {message}"
 
     return Error(
-        Who(e),
+        Who.Is(e),
         arguments,
         Str(e).strip() or None,
         reason,
