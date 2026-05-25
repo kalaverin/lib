@@ -14,7 +14,8 @@ import base58
 import base2048
 import orjson as json
 from base2048 import DecodeError as EncoderException
-from charded import Str, string
+from charded import Str
+from charded.string import Charset
 from orjson import (
     OPT_INDENT_2,
     OPT_NAIVE_UTC,
@@ -219,12 +220,12 @@ def cast(obj):
 
 class Encoding:
 
-    Base16 = base64.b16encode, base64.b16decode, string.Charset.ASCII
-    Base32 = base64.b32encode, base64.b32decode, string.Charset.ASCII
-    Base58 = base58.b58encode, base58.b58decode, string.Charset.ASCII
-    Base64 = base64.b64encode, base64.b64decode, string.Charset.ASCII
-    Base85 = base64.b85encode, base64.b85decode, string.Charset.ASCII
-    Base2048 = base2048.encode, base2048.decode, string.Charset.UTF8
+    Base16 = base64.b16encode, base64.b16decode, Charset.ASCII
+    Base32 = base64.b32encode, base64.b32decode, Charset.ASCII
+    Base58 = base58.b58encode, base58.b58decode, Charset.ASCII
+    Base64 = base64.b64encode, base64.b64decode, Charset.ASCII
+    Base85 = base64.b85encode, base64.b85decode, Charset.ASCII
+    Base2048 = base2048.encode, base2048.decode, Charset.UTF8
     Codecs = (Base16, Base32, Base58, Base64, Base85, Base2048)
 
     Charsets: ClassVar[dict[str, tuple]] = {
@@ -257,7 +258,7 @@ def dumps(value, /, encoder=None, proto=None, ratio=None, charset=None):
         module = required(BACKENDS.get(encoder) or encoder)
         value = module.dumps(value)
         value = (
-            encoder + DEADBEEF + to_bytes(value, charset=charset or string.Charset.UTF8)
+            encoder + DEADBEEF + to_bytes(value, charset=charset or Charset.UTF8)
         )
 
     return compress(value, ratio or 9)
@@ -300,7 +301,7 @@ def pack(value, *args, codec=Encoding.Base2048, **kw):
     """Pack value with codec prefix and encode it with codec"""
 
     return (
-        bytes(hex(Encoding.Codecs.index(codec)), string.Charset.ASCII)[2:]
+        bytes(hex(Encoding.Codecs.index(codec)), Charset.ASCII)[2:]
         + Str.to_bytes(codec[0](to_bytes(dumps(value, *args, **kw))), codec[2])
     ).decode(codec[2])
 

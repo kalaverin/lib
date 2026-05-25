@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import dataclass, asdict
 from functools import lru_cache
 from time import sleep, time
 from typing import Any, Literal
@@ -25,6 +26,7 @@ class Pool:
         redis.exceptions.TryAgainError,
     )
 
+    @dataclass
     class Config:
 
         host: str = "localhost"
@@ -47,7 +49,7 @@ class Pool:
 
     @pin.cls.here
     def DefaultPool(cls) -> Redis:  # noqa: N802
-        return Redis(connection_pool=ConnectionPool(**cls.Config.Defaults))
+        return Redis(connection_pool=ConnectionPool(**asdict(cls.Config())))
 
     def __init__(
         self,

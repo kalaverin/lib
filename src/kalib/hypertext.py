@@ -1,5 +1,6 @@
 from collections import defaultdict
 from contextlib import suppress
+from dataclasses import dataclass
 from enum import EnumMeta, IntEnum
 from functools import lru_cache, wraps
 from http import HTTPStatus
@@ -855,7 +856,8 @@ def proxy_to_super(func):
     return wrapper
 
 
-class URL(dataclass):
+@dataclass
+class URL:
     scheme: str
     host: str | int
     port: str | int | None = None
