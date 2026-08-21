@@ -1,13 +1,13 @@
 {
   "include": [
-    "../../src/kalib/"
+    "../../src/zx/lib/"
   ],
   "exclude": [
     "**/.*",
     "**/__pycache__/"
   ],
   "ignore": [
-    "../../src/kalib/settings.py"
+    "../../src/zx/lib/settings.py"
   ],
   "executionEnvironments": [
     {

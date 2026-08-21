@@ -1,6 +1,4 @@
 .*
-.*/
-/*.md
 *.egg-info/
 __pycache__/
 
@@ -14,11 +12,7 @@ __pycache__/
 !.gitattributes
 !.gitignore
 
-!etc/lint/.markdownlint-cli2.jsonc
-
 _build/
 build/
 dist/
 docs/_build/
-
-uv.lock

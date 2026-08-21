@@ -1,0 +1,13 @@
+"""Error taxonomy of the serial package."""
+
+
+class SerializationError(Exception): ...
+
+
+class RegistryError(Exception): ...
+
+
+class SerializeError(Exception): ...
+
+
+class DeserializeError(Exception): ...

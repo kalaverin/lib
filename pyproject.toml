@@ -8,7 +8,7 @@ requires = [
 build = [
   "setuptools"
 ]
-development = [
+dev = [
   "async-asgi-testclient>=1.4.11",
   "bandit[toml]>=1.9.4",
   "basedmypy>=2.10.0",
@@ -16,27 +16,14 @@ development = [
   "better-exceptions>=0.3.3",
   "black>=26.3.1",
   "colorama>=0.4.6",
-  "faker>=40.18.0",
   "hexora>=0.2.4",
   "pre-commit>=4.6.0",
   "pyrefly>=1.0.0",
-  "pytest-asyncio>=1.3.0",
-  "pytest-check>=2.8.0",
-  "pytest-clarity>=1.0.1",
-  "pytest-cov>=7.1.0",
-  "pytest-dotenv>=0.5.2",
-  "pytest-icdiff>=0.9",
-  "pytest-mock>=3.15.1",
-  "pytest-randomly>=4.1.0",
-  "pytest-timeout>=2.4.0",
-  "pytest-xdist>=3.8.0",
-  "pytest>=9.0.3",
   "python-lsp-server[all]>=1.14.0",
   "refurb>=2.3.1",
   "righttyper>=0.1.0",
   "ruff>=0.15.13",
   "structlog>=25.5.0",
-  "time-machine>=3.2.0",
   "ty>=0.0.36",
   "typing-extensions>=4.15.0",
   "typing-inspection>=0.4.2",
@@ -51,6 +38,23 @@ documentation = [
   "sphinx-rtd-dark-mode>=1.3.0",
   "sphinx-rtd-theme>=3.0.2"
 ]
+testing = [
+  "faker>=40.18.0",
+  "fakeredis>=2.40.0",
+  "pytest-asyncio>=1.3.0",
+  "pytest-check>=2.8.0",
+  "pytest-clarity>=1.0.1",
+  "pytest-cov>=7.1.0",
+  "pytest-dotenv>=0.5.2",
+  "pytest-icdiff>=0.9",
+  "pytest-mock>=3.15.1",
+  "pytest-randomly>=4.1.0",
+  "pytest-socket>=0.8.1",
+  "pytest-timeout>=2.4.0",
+  "pytest-xdist>=3.8.0",
+  "pytest>=9.0.3",
+  "time-machine>=3.2.0",
+]
 
 [project]
 authors = [
@@ -62,25 +66,36 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "License :: OSI Approved :: BSD License",
   "Operating System :: OS Independent"
 ]
 dependencies = [
+  "aiohttp>=3.14.5",
   "base2048>=0.1.3",
   "base58>=2.1.1",
-  "charded>=1.0.1,<2",
+  "can-ada>=3.0.0",
+  "charded>=2.0.1,<3",
   "fake-useragent>=2.2.0",
   "feedparser>=6.0.11",
   "hiredis>=3.2.1",
-  "kain>=1.1.5,<2",
+  "httpx>=0.28.1",
+  "kain>=2.0.2,<3",
+  "kapro>=1.0.1,<2",
   "lxml>=5.4.0",
+  "lz4>=4.4.5",
   "msgpack>=1.1.0",
+  "multidict>=6.8.0",
   "natsort>=8.4.0",
   "orjson>=3.10.16",
   "pydantic>=2.11.7",
   "pydantic-settings>=2.14.1",
+  "pyserde>=0.34.0",
+  "python-dateutil>=2.9.0.post0",
   "redis>=6.2.0",
   "redis-lock-py>=1.2.0",
+  "requests>=2.34.2",
   "setproctitle>=1.3.7",
   "xxhash>=3.5.0",
   "yarl>=1.20.0",
@@ -102,7 +117,7 @@ keywords = [
 ]
 name = "kalib"
 readme = "README.md"
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.12,<3.16"
 version = "1.0.0"
 
 [project.license]
@@ -113,13 +128,27 @@ exclude_dirs = [".venv", ".git"]
 
 [tool.black]
 line-length = 89
-target-version = ["py311"]
+target-version = ["py312"]
 
 [tool.mypy]
 ignore_missing_imports = true
 
 [tool.pylint.messages_control]
 disable = "all"
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = [
+  "tests"
+]
+addopts = [
+  "--tb=short",
+  "-ra"
+]
+xfail_strict = true
+markers = [
+  "serial: mutates process-global state (logging, argv, structlog); run separately via -m serial"
+]
 
 [tool.refurb]
 ignore = [
@@ -130,12 +159,6 @@ ignore = [
 
 [tool.ruff]
 extend = "etc/lint/ruff.toml"
-
-[tool.ruff.lint.isort]
-known-third-party = [
-  "charded",
-  "kain"
-]
 
 [tool.ruff.lint.per-file-ignores]
 "contrib/*" = []
@@ -156,5 +179,9 @@ possibly-missing-attribute = "ignore"
 
 [tool.uv]
 default-groups = [
-  "development"
+]
+
+[tool.uv.workspace]
+members = [
+    ".",
 ]
