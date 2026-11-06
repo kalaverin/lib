@@ -87,6 +87,11 @@ test:
 		--cov src \
 		--cov-report term-missing
 
+publish:
+	@rm -rf dist/ || true
+	@uv build
+	@uv run uv-publish --repo kalib
+	@rm -rf dist/ || true
+
 %:
 	@just $@
-

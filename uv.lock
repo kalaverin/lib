@@ -1434,7 +1434,7 @@ requires-dist = [
     { name = "hiredis", specifier = ">=3.2.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "kain", specifier = ">=2.0.2,<3" },
-    { name = "kapro", specifier = ">=1.0.1,<2" },
+    { name = "kapro", specifier = ">=1.0.2,<2" },
     { name = "lxml", specifier = ">=5.4.0" },
     { name = "lz4", specifier = ">=4.4.5" },
     { name = "msgpack", specifier = ">=1.1.0" },
@@ -1506,14 +1506,14 @@ testing = [
 
 [[package]]
 name = "kapro"
-version = "1.0.1"
+version = "1.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kain" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/5b/57973df4df40ae182ff9dfb579bb90d54dc4de9a3e4866fb028d820032b5/kapro-1.0.1.tar.gz", hash = "sha256:ab88ff269511b9e17c76ee56962586a493cfd973dc809981c0a5a2a55528ab01", size = 41750, upload-time = "2026-11-05T18:24:08.313Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/08/39/428a6f95ec46d4d1860c663a70cb1b4390111aeb0a3cdc0ee3a3c866d9b9/kapro-1.0.2.tar.gz", hash = "sha256:2aeeadb82549d6227179f3373b5b9a5d9e78d50048e62712ef4c5d39c80efea4", size = 43233, upload-time = "2026-11-06T11:21:07.017Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/7c/13b34afe660a6ce31311402518558ebd46fa96a74b17b2a4b96dddd167b6/kapro-1.0.1-py3-none-any.whl", hash = "sha256:1b9cece8a140537a331c251a0d80935e971c223d582e8335f70f61f1b0bad974", size = 28052, upload-time = "2026-11-05T18:24:07.262Z" },
+    { url = "https://files.pythonhosted.org/packages/07/a5/c23d9d03dac3b5ce728a4642473bb6044322f7654d2e42008302f9546397/kapro-1.0.2-py3-none-any.whl", hash = "sha256:e151ef63005b0be559ef06a8d79344d1831f967a40551d31244859ea9679b74a", size = 30092, upload-time = "2026-11-06T11:21:05.878Z" },
 ]
 
 [[package]]
