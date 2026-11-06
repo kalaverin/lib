@@ -23,7 +23,6 @@ from typing import (
 from urllib.parse import parse_qsl, unquote, urlencode
 
 import can_ada
-import yarl
 
 from zx.core import Who
 from zx.core.classes import Nothing
@@ -117,8 +116,8 @@ class URL:
         """Build a canonical URL from any supported source.
 
         Args:
-            source: A string, a Mapping of components, a yarl.URL,
-                a can_ada.URL, or another URL. Everything is rendered to
+            source: A string, a Mapping of components, a can_ada.URL,
+                or another URL. Everything is rendered to
                 a string and strictly parsed by can_ada.
             **components: Component keywords (scheme=..., host=..., ...),
                 merged into the Mapping branch when source is omitted.
@@ -168,7 +167,7 @@ class URL:
         if isinstance(source, can_ada.URL):
             return source.href
 
-        if isinstance(source, yarl.URL | URL):
+        if isinstance(source, URL):
             return str(source)
 
         if isinstance(source, Mapping):
@@ -446,4 +445,4 @@ def _assemble(components: Mapping[str, object]) -> str:
     return text
 
 
-type URLSource = str | Mapping[str, object] | yarl.URL | can_ada.URL | URL
+type URLSource = str | Mapping[str, object] | can_ada.URL | URL

@@ -6,7 +6,6 @@ from itertools import product
 
 import can_ada
 import pytest
-import yarl
 from faker import Faker
 
 from zx.lib.hypertext.url import (
@@ -297,22 +296,6 @@ def test_init_from_keywords_parses_components() -> None:
         query="q=1",
         fragment="f",
     )
-
-    # --- Assert ---
-    assert url.as_dict() == CANON_COMPONENTS
-
-
-def test_init_from_yarl_url_parses_components() -> None:
-    """
-    Given: a yarl.URL instance.
-    When: it is passed as the source.
-    Then: it stringifies into the same canonical form.
-    """
-    # --- Arrange ---
-    source = yarl.URL(CANON_SOURCE)
-
-    # --- Act ---
-    url = URL(source)
 
     # --- Assert ---
     assert url.as_dict() == CANON_COMPONENTS

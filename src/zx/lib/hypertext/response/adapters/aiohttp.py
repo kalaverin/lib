@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+import aiohttp
 import aiohttp.client_reqrep
 from multidict import CIMultiDict
 
@@ -9,6 +10,8 @@ from zx.lib.hypertext.response.core import (
     Internals,
     register,
 )
+
+__all__ = ["aiohttp"]
 
 
 class AioHttpAdapter:

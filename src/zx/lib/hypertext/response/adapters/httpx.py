@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-import httpx
+import httpx2 as httpx
 from multidict import CIMultiDict
 
 from zx.lib.hypertext.response.core import (
     Internals,
     register,
 )
+
+__all__ = ["httpx"]
 
 
 class HTTPxAdapter:

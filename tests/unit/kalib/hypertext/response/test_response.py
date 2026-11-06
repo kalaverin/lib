@@ -10,7 +10,6 @@ from http import HTTPStatus
 from typing import ClassVar
 
 import httpx
-import msgpack
 import orjson
 import pytest
 import requests
@@ -46,7 +45,6 @@ RSS_CONTENT = (
     b'<rss version="2.0"><channel><title>Feed Title</title></channel></rss>'
 )
 TEXT_CONTENT = b"hello world"
-MSGPACK_CONTENT = msgpack.packb({"key": "value"}, use_bin_type=True)
 BINARY_CONTENT = b"\x00\xff\x01\x02\xfe\xfd" * 4
 
 
@@ -561,30 +559,6 @@ def test_feed_property_decodes_payload(
 
     # --- Assert ---
     assert feed["feed"]["title"] == "Feed Title"
-
-
-def test_msgpack_property_decodes_payload(
-    requests_raw: Callable[..., requests.Response],
-) -> None:
-    """
-    Given: a response with a msgpack body and an application/msgpack type.
-    When: the msgpack property is read.
-    Then: the pinned mapping round-trips through packb/loads.
-    """
-    # --- Arrange ---
-    importlib.import_module(REQUESTS_ADAPTER_MODULE)
-    response = Response.read(
-        requests_raw(
-            headers={"Content-Type": "application/msgpack"},
-            content=MSGPACK_CONTENT,
-        ),
-    )
-
-    # --- Act ---
-    payload = response.msgpack
-
-    # --- Assert ---
-    assert payload == {"key": "value"}
 
 
 def test_text_property_decodes_payload(
@@ -1188,7 +1162,6 @@ FIND_EXTRA_CASES = (
     ("application/json;", "to_json"),
     ("application/xhtml+xml", "to_html"),
     ("text/x-opml", "to_feed"),
-    ("application/msgpack; charset=binary", "to_msgpack"),
     ("text/plain", "to_text"),
     ("text/", None),
     ("*/*", None),
@@ -1198,7 +1171,6 @@ FIND_EXTRA_IDS = (
     "trailing-semicolon",
     "xhtml-exact-beats-any-suffix",
     "opml-feed",
-    "msgpack-with-charset",
     "plain-text",
     "empty-subtype",
     "any-any",

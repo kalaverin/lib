@@ -3,6 +3,10 @@
 Every decoder is a plain function taking raw response content. The
 table maps MIME type patterns to decoders; patterns support exact
 matches, ``type/*`` wildcards, and structured suffixes (``*+xml``).
+
+The ``feedparser`` and ``lxml`` imports are lazy: they live in the
+optional ``decoders`` extra, so importing this module must not require
+them (the ImportError surfaces only when the matching decoder runs).
 """
 
 from __future__ import annotations
@@ -10,15 +14,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 
-import feedparser
-import msgpack
-from lxml import etree
-from lxml import html as lxml_html
 from orjson import loads as to_orjson
 
 from zx.str import varchar
 
 if TYPE_CHECKING:
+    import feedparser
     from lxml.etree import _Element
     from lxml.html import HtmlElement
 
@@ -32,7 +33,6 @@ __all__ = (
     "to_feed",
     "to_html",
     "to_json",
-    "to_msgpack",
     "to_text",
     "to_xml",
 )
@@ -49,6 +49,8 @@ def to_text(content: bytes, /) -> str:
 
 
 def to_feed(content: bytes, /) -> feedparser.FeedParserDict:
+    import feedparser  # noqa: PLC0415
+
     return feedparser.parse(content)
 
 
@@ -57,15 +59,15 @@ def to_json(content: bytes, /) -> JSONType:
 
 
 def to_html(content: bytes, /) -> HtmlElement:
-    return lxml_html.document_fromstring(content)
+    from lxml import html  # noqa: PLC0415
+
+    return html.document_fromstring(content)
 
 
 def to_xml(content: bytes, /) -> _Element:
+    from lxml import etree  # noqa: PLC0415
+
     return etree.fromstring(content)
-
-
-def to_msgpack(content: bytes, /) -> Any:  # type: ignore[explicit-any]  # noqa: ANN401
-    return msgpack.loads(content, raw=False)
 
 
 _MIME_PARTS = 2
@@ -142,8 +144,6 @@ DECODERS: list[tuple[str, Decoder]] = [
     ("*+xml", to_xml),
     ("application/json", to_json),
     ("application/*+json", to_json),
-    ("application/x-msgpack", to_msgpack),
-    ("application/msgpack", to_msgpack),
     ("text/plain", to_text),
 ]
 

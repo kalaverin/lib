@@ -32,12 +32,6 @@ dev = [
   "yamlfix>=1.19.1",
   "yamllint>=1.38.0"
 ]
-documentation = [
-  "sphinx>=8.1.3",
-  "sphinx-autodoc-typehints>=3.0.1",
-  "sphinx-rtd-dark-mode>=1.3.0",
-  "sphinx-rtd-theme>=3.0.2"
-]
 testing = [
   "faker>=40.18.0",
   "fakeredis>=2.40.0",
@@ -72,34 +66,22 @@ classifiers = [
   "Operating System :: OS Independent"
 ]
 dependencies = [
-  "aiohttp>=3.14.5",
   "base58>=2.1.1",
-  "can-ada>=3.0.0",
   "charded>=2.0.1,<3",
-  "fake-useragent>=2.2.0",
-  "feedparser>=6.0.11",
-  "hiredis>=3.2.1",
-  "httpx>=0.23.1",
   "kain>=2.0.2,<3",
   "kapro>=1.0.2,<2",
-  "lxml>=5.4.0",
   "lz4>=4.4.5",
-  "msgpack>=1.1.0",
-  "multidict>=6.8.0",
   "natsort>=8.4.0",
   "orjson>=3.10.16",
-  "pydantic>=2.11.7",
-  "pydantic-settings>=2.14.1",
   "pyserde>=0.34.0",
-  "python-dateutil>=2.9.0.post0",
-  "redis>=6.2.0",
-  "redis-lock-py>=1.2.0",
-  "requests>=2.34.2",
+  "python-dateutil>=2.9.0",
+  "rich>=15.0.0",
   "setproctitle>=1.3.7",
+  "structlog>=26.1.0",
   "xxhash>=3.5.0",
-  "yarl>=1.20.0",
   "zstd>=1.5.6.7",
 ]
+
 description = "A comprehensive set of advanced utilities for Python programming, e.g. HTTP communication, string handling, logging enhancements, introspection, dynamic importing, property caching descriptors, data class extensions, serialization, etc."
 keywords = [
   "dataclass",
@@ -118,6 +100,45 @@ name = "kalib"
 readme = "README.md"
 requires-python = ">=3.12,<3.16"
 version = "1.0.1"
+
+[project.optional-dependencies]
+requests = [
+  "can-ada>=3.0.0",
+  "brotli>=1.2.1",
+  "fake-useragent>=2.2.0",
+  "multidict>=6.8.0",
+  "requests>=2.34.2",
+  "backports.zstd; python_version < '3.14'",
+]
+httpx = [
+  "brotli>=1.2.1",
+  "can-ada>=3.0.0",
+  "fake-useragent>=2.2.0",
+  "httpx2>=2.16.0",
+  "multidict>=6.8.0",
+  "backports.zstd; python_version < '3.14'",
+]
+aiohttp = [
+  "aiohttp>=3.14.5",
+  "brotli>=1.2.1",
+  "can-ada>=3.0.0",
+  "fake-useragent>=2.2.0",
+  "multidict>=6.8.0",
+  "backports.zstd; python_version < '3.14'",
+]
+decoders = [
+  "feedparser>=6.0.11",
+  "lxml>=5.4.0",
+]
+redis = [
+  "hiredis>=3.2.1",
+  "redis>=6.2.0",
+  "redis-lock-py>=1.2.0",
+]
+settings = [
+  "pydantic>=2.11.7",
+  "pydantic-settings>=2.14.1",
+]
 
 [project.license]
 text = "BSD License"

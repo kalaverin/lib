@@ -1,17 +1,9 @@
-"""The serializer registry and the `@serializer` decorator.
-
-Duplicate registration of a different serializer for the same class raises
-`RegistryError`; re-registering the same function is a silent no-op.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-from pydantic import BaseModel
 
 from zx.core import Is, Who, required
 from zx.lib.serial.errors import RegistryError
@@ -82,8 +74,3 @@ def serializer(
 @serializer(Path)
 def from_pathlib(obj: Path) -> JSONType:
     return str(obj)
-
-
-@serializer(BaseModel)
-def from_pydantic(obj: BaseModel) -> JSONType:
-    return obj.model_dump()

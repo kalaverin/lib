@@ -10,12 +10,8 @@ from zx.lib.hypertext import URL, Agent, Catch, HTTPError
 
 pytestmark = pytest.mark.serial
 
-EXPECTED_HEADERS = {
-    "accept": "*/*",
-    "accept-encoding": "br, gzip, deflate, zstd",
-}
 EXPORTED_NAMES = frozenset(
-    {"URL", "Agent", "Catch", "Error", "Headers", "Status", "Response"},
+    {"URL", "Agent", "Catch", "Error", "Status", "Response"},
 )
 
 
@@ -40,25 +36,11 @@ def test_namespace_reexports_hypertext_contour() -> None:
     assert HTTP.Status is HTTPStatus
 
 
-def test_headers_pin_default_accept_contour() -> None:
-    """
-    Given: the Headers module constant.
-    When: it is read.
-    Then: it pins the default accept and accept-encoding values.
-    """
-    # --- Arrange ---
-
-    # --- Act ---
-
-    # --- Assert ---
-    assert HTTP.Headers == EXPECTED_HEADERS
-
-
 def test_all_exports_exactly_the_namespace_names() -> None:
     """
     Given: the __all__ declaration of the namespace module.
     When: it is compared to the full set of exported names.
-    Then: exactly the six public names are exported, no more, no less.
+    Then: exactly the five public names are exported, no more, no less.
     """
     # --- Arrange ---
 

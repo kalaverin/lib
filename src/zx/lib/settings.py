@@ -9,8 +9,10 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal, Protocol, TypeVar
 
 import orjson
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from zx.lib.serial import JSONType, serializer
 
 logger = getLogger(__name__)
 
@@ -126,3 +128,8 @@ def show_environment(  # noqa: UP047
             "version": config.version,
         },
     )
+
+
+@serializer(BaseModel)
+def from_pydantic(obj: BaseModel) -> JSONType:
+    return obj.model_dump()

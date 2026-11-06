@@ -10,6 +10,8 @@ from zx.lib.hypertext.response.core import (
     register,
 )
 
+__all__ = ["requests"]
+
 
 class RequestsAdapter:
     raw_type: ClassVar[type[requests.Response]] = requests.Response

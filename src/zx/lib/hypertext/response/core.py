@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
     import aiohttp.client_reqrep
     import feedparser
-    import httpx
+    import httpx2 as httpx
     import multidict
     import requests
     from lxml.etree import _Element
@@ -145,7 +145,7 @@ def _find_adapter(raw: object, /) -> BackendAdapter[object]:
     msg = (
         f"no adapter for {Who.Is(raw)}; "
         f"registered: {known}; "
-        f"import zx.lib.hypertext.response.<backend> to add one"
+        f"import zx.lib.hypertext.response.adapters.<backend> to add one"
     )
     raise HTTPResponseError(msg)
 
@@ -335,10 +335,6 @@ class Response[B]:
     @property
     def xml(self) -> _Element:
         return decoders.to_xml(self.content)
-
-    @property
-    def msgpack(self) -> Any:  # noqa: ANN401
-        return decoders.to_msgpack(self.content)
 
     @property
     def data(self) -> Any:  # noqa: ANN401

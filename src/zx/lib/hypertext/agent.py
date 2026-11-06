@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from typing import Final
-
-from fake_useragent import UserAgent
+from typing import TYPE_CHECKING, Final
 
 from zx.core import Is
 from zx.prop import mixed_property, pin
+
+if TYPE_CHECKING:
+    from fake_useragent import UserAgent
+
+
+def _user_agent(platforms: list[str], fallback: str, /) -> UserAgent:
+    """Build a UserAgent; the import is lazy (optional ``backend`` extras)."""
+    from fake_useragent import UserAgent  # noqa: PLC0415
+
+    return UserAgent(platforms=platforms, fallback=fallback)
+
 
 DEFAULT_PLATFORMS: Final = ["desktop"]
 FALLBACK_USER_AGENT: Final = (
@@ -21,10 +30,7 @@ class Agent:
     def default_agent(
         cls,
     ) -> UserAgent:  # zx class-property idiom
-        return UserAgent(
-            platforms=DEFAULT_PLATFORMS,
-            fallback=FALLBACK_USER_AGENT,
-        )
+        return _user_agent(list(DEFAULT_PLATFORMS), FALLBACK_USER_AGENT)
 
     @mixed_property
     def header(
@@ -38,7 +44,7 @@ class Agent:
         platforms: list[str] = DEFAULT_PLATFORMS,
         fallback: str = FALLBACK_USER_AGENT,
     ) -> None:
-        self.agent = UserAgent(platforms=list(platforms), fallback=fallback)
+        self.agent = _user_agent(list(platforms), fallback)
 
     @property
     def random(self) -> str:
