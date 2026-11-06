@@ -2,17 +2,26 @@
 
 import binascii
 import dataclasses
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
-import base2048
 import pytest
 from faker import Faker
 
-from zx.lib.serial.codecs import Algorithm, AlgorithmType, decode, encode
+from zx.lib.serial.codecs import (
+    ORDER,
+    Algorithm,
+    AlgorithmType,
+    Codecs,
+    decode,
+    encode,
+)
 from zx.lib.serial.errors import DeserializeError
 
-CODEC_IDS = ("base16", "base32", "base58", "base64", "base85", "base2k")
-CODEC_COUNT = len(Algorithm.Codecs)
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+CODEC_IDS = ("base16", "base32", "base58", "base64", "base85")
+CODEC_COUNT = len(ORDER)
 ASCII_BOUNDARY = 128
 
 EDGE_PAYLOADS: tuple[bytes, ...] = (
@@ -55,10 +64,10 @@ def test_encode_decode_round_trip_edge_payloads(
     Then: the original bytes are returned and the header is the codec index.
     """
     # --- Arrange ---
-    codec = Algorithm.Codecs[codec_index]
+    algorithm = ORDER[codec_index]
 
     # --- Act ---
-    encoded = encode(payload, codec)
+    encoded = encode(payload, algorithm.value)
 
     # --- Assert ---
     assert encoded[0] == codec_index
@@ -79,10 +88,10 @@ def test_encode_decode_round_trip_random_binary(
     """
     # --- Arrange ---
     payload = fake.binary(length=size)
-    codec = Algorithm.Codecs[codec_index]
+    algorithm = ORDER[codec_index]
 
     # --- Act ---
-    encoded = encode(payload, codec)
+    encoded = encode(payload, algorithm.value)
 
     # --- Assert ---
     assert encoded[0] == codec_index
@@ -100,7 +109,6 @@ def test_encode_decode_round_trip_random_binary(
         (2, True),
         (3, True),
         (4, True),
-        (5, False),
     ),
     ids=CODEC_IDS,
 )
@@ -116,10 +124,10 @@ def test_encode_body_respects_declared_charset(
     """
     # --- Arrange ---
     payload = bytes(range(256))
-    codec = Algorithm.Codecs[codec_index]
+    algorithm = ORDER[codec_index]
 
     # --- Act ---
-    encoded = encode(payload, codec)
+    encoded = encode(payload, algorithm.value)
     body = encoded[1:]
 
     # --- Assert ---
@@ -195,7 +203,6 @@ def test_decode_invalid_charset_body_raises_unicode_decode_error(
         (2, ValueError),
         (3, None),  # base64 ignores illegal characters — leniency pin
         (4, None),  # base85 ignores illegal characters — leniency pin
-        (5, base2048.DecodeError),
     ),
     ids=CODEC_IDS,
 )
@@ -224,14 +231,14 @@ def test_decode_garbled_body_fault_behavior(
 
 def test_codec_table_is_unique_and_positional() -> None:
     """
-    Given: the Algorithm.Codecs table.
+    Given: the codec table.
     When: indexes are inspected.
     Then: every codec sits at a unique position matching its index lookup.
     """
     # --- Arrange ---
 
     # --- Act ---
-    indexes = [Algorithm.Codecs.index(codec) for codec in Algorithm.Codecs]
+    indexes = [ORDER.index(algorithm) for algorithm in ORDER]
 
     # --- Assert ---
     assert indexes == list(range(CODEC_COUNT))
@@ -244,7 +251,7 @@ def test_algorithm_type_is_frozen_dataclass() -> None:
     Then: a FrozenInstanceError is raised.
     """
     # --- Arrange ---
-    codec: AlgorithmType = Algorithm.Base64
+    codec: AlgorithmType = Codecs.Base64
     replacement: Callable[[bytes], bytes] = bytes
 
     # --- Act / Assert ---
@@ -254,16 +261,14 @@ def test_algorithm_type_is_frozen_dataclass() -> None:
 
 # --- default algorithm, unknown codecs, header-only decode ---
 
-# Base2k is sixth in Algorithm.Codecs; the header byte is its table index.
-BASE2K_HEADER_INDEX = Algorithm.Codecs.index(Algorithm.Base2k)
-BASE64_HEADER_INDEX = Algorithm.Codecs.index(Algorithm.Base64)
+BASE85_HEADER_INDEX = ORDER.index(Algorithm.Base85)
 
 
-def test_encode_default_algorithm_uses_base2k_header() -> None:
+def test_encode_default_algorithm_uses_base85_header() -> None:
     """
     Given: a payload and no explicit algorithm.
     When: it is encoded.
-    Then: the header byte is the Base2k index in Algorithm.Codecs and the
+    Then: the header byte is the Base85 index in Algorithm.Codecs and the
         round trip preserves the payload.
     """
     # --- Arrange ---
@@ -273,30 +278,42 @@ def test_encode_default_algorithm_uses_base2k_header() -> None:
     encoded = encode(payload)
 
     # --- Assert ---
-    assert encoded[0] == BASE2K_HEADER_INDEX
-    assert BASE2K_HEADER_INDEX == 5
+    assert encoded[0] == BASE85_HEADER_INDEX
     assert decode(encoded) == payload
 
 
-def test_encode_with_unregistered_algorithm_type_raises_value_error() -> None:
+@pytest.mark.parametrize(
+    "name",
+    CODEC_IDS,
+    ids=CODEC_IDS,
+)
+def test_encode_accepts_codec_name_strings(name: str) -> None:
     """
-    Given: a bare AlgorithmType that is not part of Algorithm.Codecs.
-    When: it is passed to encode.
-    Then: the Codecs.index lookup fails with a ValueError.
+    Given: a payload and a codec passed as a plain name string.
+    When: it is encoded and decoded back.
+    Then: the named codec is used (header index) and the payload survives.
     """
-
     # --- Arrange ---
-    def _encode(_: object) -> bytes:
-        return b"?"
+    payload = b"\x00name-string\xff"
+    expected_index = CODEC_IDS.index(name)
 
-    def _decode(_: bytes) -> object:
-        return None
+    # --- Act ---
+    encoded = encode(payload, name)
 
-    unknown = AlgorithmType(encode=_encode, decode=_decode, charset="unknown")
+    # --- Assert ---
+    assert encoded[0] == expected_index
+    assert decode(encoded) == payload
 
+
+def test_encode_rejects_unknown_codec_name() -> None:
+    """
+    Given: an algorithm name that is not in the codec table.
+    When: it is passed to encode.
+    Then: a ValueError names the unknown codec.
+    """
     # --- Act / Assert ---
-    with pytest.raises(ValueError, match="not in"):
-        encode(b"payload", algo=unknown)
+    with pytest.raises(ValueError, match="not a valid"):
+        encode(b"payload", "base99")  # type: ignore[arg-type]
 
 
 def test_decode_header_only_blob_returns_empty_bytes() -> None:
@@ -307,7 +324,7 @@ def test_decode_header_only_blob_returns_empty_bytes() -> None:
         body without fault.
     """
     # --- Arrange ---
-    blob = bytes([BASE64_HEADER_INDEX])
+    blob = bytes([BASE85_HEADER_INDEX])
 
     # --- Act ---
     result = decode(blob)

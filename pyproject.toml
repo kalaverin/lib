@@ -73,14 +73,13 @@ classifiers = [
 ]
 dependencies = [
   "aiohttp>=3.14.5",
-  "base2048>=0.1.3",
   "base58>=2.1.1",
   "can-ada>=3.0.0",
   "charded>=2.0.1,<3",
   "fake-useragent>=2.2.0",
   "feedparser>=6.0.11",
   "hiredis>=3.2.1",
-  "httpx>=0.28.1",
+  "httpx>=0.23.1",
   "kain>=2.0.2,<3",
   "kapro>=1.0.2,<2",
   "lxml>=5.4.0",
@@ -118,7 +117,7 @@ keywords = [
 name = "kalib"
 readme = "README.md"
 requires-python = ">=3.12,<3.16"
-version = "1.0.0"
+version = "1.0.1"
 
 [project.license]
 text = "BSD License"

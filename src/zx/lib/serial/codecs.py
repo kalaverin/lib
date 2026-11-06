@@ -1,24 +1,40 @@
 """Base-N byte codecs with a codec-index header.
 
-Header format: a single raw byte — the index into `Algorithm.Codecs`.
+Header format: a single raw byte — the index into the codec table
+(`Algorithm` definition order).
 """
 
 import base64
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import ClassVar
+from enum import StrEnum, auto
+from typing import ClassVar, Literal
 
 import base58
-import base2048
 
 from zx.lib.serial.errors import DeserializeError
 from zx.str import varchar
 from zx.str.varchar import Charset
 
+type AlgorithmName = Literal["base16", "base32", "base58", "base64", "base85"]
+
 __all__ = (
+    "Algorithm",
+    "AlgorithmName",
+    "Codecs",
     "decode",
     "encode",
 )
+
+
+class Algorithm(StrEnum):
+    """Wire codec identifiers; the definition order IS the header index."""
+
+    Base16 = auto()
+    Base32 = auto()
+    Base58 = auto()
+    Base64 = auto()
+    Base85 = auto()
 
 
 @dataclass(frozen=True)
@@ -28,7 +44,9 @@ class AlgorithmType:
     decode: Callable[[str], bytes]
 
 
-class Algorithm:
+class Codecs:
+    """Codec registry: members mirror `Algorithm`, keyed by the enum."""
+
     Base16 = AlgorithmType(
         charset=Charset.ASCII,
         encode=base64.b16encode,
@@ -54,30 +72,36 @@ class Algorithm:
         encode=base64.b85encode,
         decode=base64.b85decode,
     )
-    Base2k = AlgorithmType(
-        charset=Charset.UTF8,
-        encode=base2048.encode,
-        decode=base2048.decode,
-    )
 
-    # ensure the order of codecs is preserved for unpacking
+    Mapping: ClassVar[dict[str, AlgorithmType]] = {
+        Algorithm.Base16: Base16,
+        Algorithm.Base32: Base32,
+        Algorithm.Base58: Base58,
+        Algorithm.Base64: Base64,
+        Algorithm.Base85: Base85,
+    }
 
-    Codecs: ClassVar[tuple[AlgorithmType, ...]] = (
-        Base16,
-        Base32,
-        Base58,
-        Base64,
-        Base85,
-        Base2k,
-    )
+
+ORDER: tuple[Algorithm, ...] = tuple(Algorithm)  # the wire index table
 
 
 def encode(
     obj: bytes,
-    algo: AlgorithmType = Algorithm.Base2k,
+    algo: AlgorithmName = "base85",
 ) -> bytes:
-    header = bytes([Algorithm.Codecs.index(algo)])
-    body = varchar.to_bytes(algo.encode(obj), algo.charset)
+    """Encode `obj`, prefixing the codec-index header byte.
+
+    Args:
+        obj: The raw bytes to encode.
+        algo: The codec name ("base85" by default).
+
+    Raises:
+        ValueError: The name is not a registered `Algorithm`.
+    """
+    algorithm = Algorithm(algo)
+    codec = Codecs.Mapping[algorithm]
+    header = bytes([ORDER.index(algorithm)])
+    body = varchar.to_bytes(codec.encode(obj), codec.charset)
     return header + body
 
 
@@ -88,9 +112,10 @@ def decode(obj: bytes) -> bytes:
 
     index = obj[0]
     try:
-        algo: AlgorithmType = Algorithm.Codecs[index]
+        algorithm: Algorithm = ORDER[index]
     except IndexError as exc:
         msg = f"unknown codec index: {index}"
         raise DeserializeError(msg) from exc
 
-    return algo.decode(varchar.to_text(obj[1:], algo.charset))
+    codec = Codecs.Mapping[algorithm]
+    return codec.decode(varchar.to_text(obj[1:], codec.charset))

@@ -341,17 +341,6 @@ wheels = [
 ]
 
 [[package]]
-name = "base2048"
-version = "0.1.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/00/a5/2c630c47316f6bf0a2a0fc920f7b09f012bb53ee20baac6172ec3a030cdc/base2048-0.1.3.tar.gz", hash = "sha256:51d9eeae723b8aa84d9721211ca3b62a20cb2b884efbf53b61b3c3a7c440969d", size = 91401, upload-time = "2022-09-26T21:50:16.358Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/be/47723c2a1cf051c2f302be4dd42f847cf50fb7141569aedf8ae834e06a10/base2048-0.1.3-cp37-abi3-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:a99289d9594300e55f04fa95a009f24d25d101160818c0be13e56edd9e4ca5c5", size = 448191, upload-time = "2022-09-26T21:50:11.2Z" },
-    { url = "https://files.pythonhosted.org/packages/44/8c/1a3e859adbe3ae8f3d7c589abfd5983bd3d707b6197c369eb8e56a25cedd/base2048-0.1.3-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad23081619ae06cd7de156252303a865e571bf0527f18272bedaad0f9d431164", size = 1011385, upload-time = "2022-09-26T21:50:13.879Z" },
-    { url = "https://files.pythonhosted.org/packages/34/6f/e234bd2c89d714340a8389ebd2e313b30d87eef6cadebe12d852c671662a/base2048-0.1.3-cp37-abi3-win_amd64.whl", hash = "sha256:d1aefd5ee3bee6a6999e38fc01e6ec9cf788d72a5df28b54d8656e51b4a24a9b", size = 122941, upload-time = "2022-09-26T21:50:15.227Z" },
-]
-
-[[package]]
 name = "base58"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1336,11 +1325,10 @@ wheels = [
 
 [[package]]
 name = "kalib"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
-    { name = "base2048" },
     { name = "base58" },
     { name = "can-ada" },
     { name = "charded" },
@@ -1425,14 +1413,13 @@ testing = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.14.5" },
-    { name = "base2048", specifier = ">=0.1.3" },
     { name = "base58", specifier = ">=2.1.1" },
     { name = "can-ada", specifier = ">=3.0.0" },
     { name = "charded", specifier = ">=2.0.1,<3" },
     { name = "fake-useragent", specifier = ">=2.2.0" },
     { name = "feedparser", specifier = ">=6.0.11" },
     { name = "hiredis", specifier = ">=3.2.1" },
-    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "httpx", specifier = ">=0.23.1" },
     { name = "kain", specifier = ">=2.0.2,<3" },
     { name = "kapro", specifier = ">=1.0.2,<2" },
     { name = "lxml", specifier = ">=5.4.0" },
