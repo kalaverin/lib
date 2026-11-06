@@ -118,7 +118,7 @@ def to_json(
     elif isinstance(obj, deque | list | set | tuple):
         result = [jsonize(i, on_error) for i in obj]
 
-    elif Is.collection(obj):
+    elif Is.Builtin(obj) and Is.collection(obj):
         msg = "collection is not a dataclass, deque, dict, list, set or tuple"
         logger.warning(
             msg,
