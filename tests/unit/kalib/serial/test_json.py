@@ -378,7 +378,7 @@ def test_to_json_set_returns_array_of_elements() -> None:
 @pytest.mark.parametrize(
     "payload,fault,reason",
     (
-        (MappingProxyType({"a": 1}), SerializationError, "collection is not"),
+        (MappingProxyType({"a": 1}), TypeError, "Type is not JSON serializable: mappingproxy"),
         (frozenset({1, 2}), TypeError, "not JSON serializable"),
     ),
     ids=("mapping-proxy", "frozenset"),

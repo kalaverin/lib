@@ -4,7 +4,7 @@ import sys
 from collections.abc import Callable, Generator
 
 import aiohttp.client_reqrep
-import httpx
+import httpx2 as httpx
 import pytest
 import requests
 import yarl

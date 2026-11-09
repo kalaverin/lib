@@ -2,7 +2,7 @@
 
 from http import HTTPStatus
 
-import httpx
+import httpx2 as httpx
 import pytest
 
 from zx.lib import HTTP

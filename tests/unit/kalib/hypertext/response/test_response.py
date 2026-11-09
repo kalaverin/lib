@@ -9,7 +9,7 @@ from collections.abc import Callable
 from http import HTTPStatus
 from typing import ClassVar
 
-import httpx
+import httpx2 as httpx
 import orjson
 import pytest
 import requests

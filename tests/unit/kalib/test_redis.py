@@ -4,16 +4,8 @@ No real sockets anywhere: every client comes from the `fake_redis`
 factory, and `zx.lib.redis.sleep`/`zx.lib.redis.monotonic` are scripted
 wherever a blocking path would otherwise touch real time.
 
-Known src bugs (tracked, NOT fixed — see the report):
-
-- `Lock.__init__` assigns `self.name`, but `redis_lock.BaseLock.name`
-  is a read-only property, so construction raises AttributeError.
-  Lock tests build instances via `_fresh_lock`, bypassing the broken
-  assignment and initializing the base attributes `acquire` reads.
-- `Lock.unlock_message` is bytes `b"ok"` while a
-  `decode_responses=True` pubsub delivers str payloads, so the message
-  never matches. The pub/sub test patches the class attribute to the
-  str form for the duration of the test.
+Lock context-manager tests stub `release()`: fakeredis has no Lua
+(`evalsha`), so the real release path cannot run against it.
 """
 
 import dataclasses
@@ -21,12 +13,12 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from typing import Any
-from uuid import uuid4
 
 import fakeredis
 import pytest
 from faker import Faker
 from redis.exceptions import ConnectionError as RedisConnectionError
+from redis_lock.exceptions import LockNotOwnedError
 
 from zx.lib.redis import Config, Flag, Lock, Pool, create_pool
 
@@ -57,13 +49,21 @@ FLAG_TTL_CALL = 10
 
 POOL_TEST_TIMEOUT = 10
 FLAG_TEST_TIMEOUT = 10
-TEN_YEAR_FALLBACK = 86400 * 365 * 10
 LOCK_TIMEOUT = 0.05
 LOCK_WAIT_TIMEOUT = 5.0
 LOCK_TEST_TIMEOUT = 30
+LOCK_TTL = 30
+LOCK_POLL_FAST = 0.01
 RELEASE_DELAY = 0.1
 CLOCK_JUMP = 50.0
 UNLOCK_MESSAGE_TEXT = "ok"
+SEAM_TIMEOUT = 1.0
+CHANGED_POLL = 0.5
+FIRST_TICK = 0.4
+SECOND_TICK = 0.7
+FINAL_TICK = 1.1
+SIGNAL_TRUE_CALLS = 2
+KEEPALIVE_IDLE = 60
 
 UP_TTL_CASES = (
     # configured ttl (init), explicit ttl (call), expected client ttl
@@ -133,6 +133,31 @@ def test_config_reassignment_raises_frozen_instance_error() -> None:
         config.port = ALT_PORT  # type: ignore[misc]
 
 
+def test_config_keepalive_options_dict_stays_hashable_and_cacheable(
+    redis_stub: list[dict[str, Any]],
+) -> None:
+    """
+    Given: a Config carrying a socket_keepalive_options dict — unhashable
+        by nature, excluded from the field hash.
+    When: the config is hashed and create_pool runs twice with equal
+        instances.
+    Then: hashing works and the cached client is shared — Redis was
+        built exactly once.
+    """
+    # --- Arrange ---
+    options = {"TCP_KEEPIDLE": KEEPALIVE_IDLE}
+
+    # --- Act ---
+    first = create_pool(Config(socket_keepalive_options=dict(options)))
+    second = create_pool(Config(socket_keepalive_options=dict(options)))
+
+    # --- Assert ---
+    assert hash(Config(socket_keepalive_options=dict(options)))
+    assert second is first
+    assert len(redis_stub) == SINGLE_CALL
+
+
+# --- create_pool memoization ---
 # --- create_pool memoization ---
 
 
@@ -289,6 +314,37 @@ def test_pool_worker_robust_false_skips_ping_and_sleep(
     assert sleeps == []
 
 
+def test_pool_worker_signal_false_returns_client_without_ping(
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Given: a pool with a falsy signal and a client whose ping must
+        never run.
+    When: the worker is requested.
+    Then: the client is returned immediately — the loop gate short-
+        circuits before any ping or sleep.
+    """
+    # --- Arrange ---
+    client = fake_redis()
+
+    def _forbidden_ping() -> bool:
+        raise AssertionError("ping must not run")
+
+    monkeypatch.setattr(client, "ping", _forbidden_ping)
+    sleeps: list[float] = []
+    monkeypatch.setattr("zx.lib.redis.sleep", sleeps.append)
+    pool = Pool(client=client, poll=POLL_INTERVAL, signal=lambda: False)
+
+    # --- Act ---
+    worker = pool.worker
+
+    # --- Assert ---
+    assert worker is client
+    assert sleeps == []
+
+
+# --- pool condition ---
 # --- pool condition ---
 
 
@@ -478,27 +534,16 @@ def test_flag_changed_external_incr_returns_true(
 
 
 @pytest.mark.timeout(FLAG_TEST_TIMEOUT)
-@pytest.mark.parametrize(
-    "infinite,expected",
-    (
-        (True, True),
-        (False, False),
-    ),
-    ids=("infinite-true", "infinite-false"),
-)
-def test_flag_changed_past_deadline_returns_infinite_value(
+def test_flag_changed_past_deadline_returns_false(
     fake: Faker,
     fake_redis: Callable[..., fakeredis.FakeRedis],
     monkeypatch: pytest.MonkeyPatch,
-    infinite: bool,
-    expected: bool,
 ) -> None:
     """
-    Given: a never-set flag, a scripted monotonic sequence whose second
-        reading is past the deadline, and a no-op sleep.
-    When: changed runs with a timeout and the parametrized infinite.
-    Then: the infinite value is returned past the deadline, without any
-        real sleeping.
+    Given: a never-set flag and a scripted monotonic sequence whose
+        second reading is past the deadline, with a recorded sleep.
+    When: changed runs with a timeout.
+    Then: False is returned past the deadline, without any sleeping.
     """
     # --- Arrange ---
     flag = Flag(
@@ -514,13 +559,85 @@ def test_flag_changed_past_deadline_returns_infinite_value(
     monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
 
     # --- Act ---
-    changed = flag.changed(FLAG_TIMEOUT, infinite=infinite)
+    changed = flag.changed(FLAG_TIMEOUT)
 
     # --- Assert ---
-    assert changed is expected
+    assert changed is False
     assert sleeps == []
 
 
+@pytest.mark.timeout(FLAG_TEST_TIMEOUT)
+def test_flag_changed_constructor_timeout_applies_without_argument(
+    fake: Faker,
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Given: a flag constructed with timeout=FLAG_TIMEOUT and a scripted
+        monotonic whose second reading is past the deadline.
+    When: changed runs without a timeout argument.
+    Then: the constructor timeout binds — False past the deadline.
+    """
+    # --- Arrange ---
+    flag = Flag(
+        fake.word(),
+        client=fake_redis(),
+        blocked=False,
+        poll=FLAG_POLL,
+        timeout=FLAG_TIMEOUT,
+    )
+    sleeps: list[float] = []
+    monkeypatch.setattr("zx.lib.redis.sleep", sleeps.append)
+    past_deadline = MONOTONIC_START + FLAG_TIMEOUT + DEADLINE_OVERDRAW
+    ticks = iter((MONOTONIC_START, past_deadline))
+    monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
+
+    # --- Act ---
+    changed = flag.changed()
+
+    # --- Assert ---
+    assert changed is False
+    assert sleeps == []
+
+
+@pytest.mark.timeout(FLAG_TEST_TIMEOUT)
+def test_flag_changed_poll_argument_caps_every_sleep(
+    fake: Faker,
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Given: an unset flag, a per-call poll argument wider than the
+        instance poll, and a scripted monotonic walking past the
+        deadline in fixed steps.
+    When: changed runs with the poll argument.
+    Then: every sleep is the per-call poll, capped by the remaining
+        budget — the argument applies to all iterations, not just
+        the first.
+    """
+    # --- Arrange ---
+    flag = Flag(fake.word(), client=fake_redis(), blocked=False, poll=FLAG_POLL)
+    sleeps: list[float] = []
+    monkeypatch.setattr("zx.lib.redis.sleep", sleeps.append)
+    ticks = iter(
+        (
+            MONOTONIC_START,
+            MONOTONIC_START + FIRST_TICK,
+            MONOTONIC_START + SECOND_TICK,
+            MONOTONIC_START + FINAL_TICK,
+        ),
+    )
+    monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
+
+    # --- Act ---
+    changed = flag.changed(FLAG_TIMEOUT, poll=CHANGED_POLL)
+
+    # --- Assert ---
+    assert changed is False
+    assert sleeps == pytest.approx([CHANGED_POLL, FLAG_TIMEOUT - SECOND_TICK])
+
+
+# --- flag non_zero ---
 # --- flag non_zero ---
 
 
@@ -581,44 +698,23 @@ def test_flag_non_zero_condition_false_returns_false(
     assert sleeps == []
 
 
-# --- lock construction (bug pin) ---
-
-
-def test_lock_init_assigning_read_only_name_raises(
-    fake: Faker,
-    fake_redis: Callable[..., fakeredis.FakeRedis],
-) -> None:
-    """
-    Given: the installed redis_lock exposes `name` as a read-only
-        property while zx.lib Lock.__init__ assigns `self.name`.
-    When: a Lock is constructed.
-    Then: AttributeError is raised — a genuine src bug, pinned here and
-        reported; the remaining Lock tests bypass __init__ via
-        `_fresh_lock`.
-    """
-    # --- Arrange ---
-    client = fake_redis()
-
-    # --- Act / Assert ---
-    with pytest.raises(AttributeError):
-        Lock(client, fake.word())
-
-
 # --- lock acquire ---
 
 
-def test_lock_acquire_free_lock_returns_true(
+def test_lock_acquire_free_lock_sets_key_with_ttl(
     fake: Faker,
     fake_redis: Callable[..., fakeredis.FakeRedis],
 ) -> None:
     """
-    Given: a free lock on a fresh client.
+    Given: a free lock constructed with an explicit ttl.
     When: acquire runs.
-    Then: True is returned immediately and the lock key exists.
+    Then: True is returned immediately, the lock key exists, and the
+        key carries the configured ttl — a crashed holder can never
+        park the lock forever.
     """
     # --- Arrange ---
     client = fake_redis()
-    lock = _fresh_lock(client, fake.word(), timeout=LOCK_WAIT_TIMEOUT)
+    lock = Lock(client, fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
 
     # --- Act ---
     acquired = lock.acquire()
@@ -626,6 +722,7 @@ def test_lock_acquire_free_lock_returns_true(
     # --- Assert ---
     assert acquired is True
     assert client.exists(lock.name) == KEY_EXISTS
+    assert client.ttl(lock.name) == LOCK_TTL
 
 
 @pytest.mark.timeout(LOCK_TEST_TIMEOUT)
@@ -643,9 +740,10 @@ def test_lock_acquire_condition_false_returns_false(
     client = fake_redis()
     name = fake.word()
     client.set(name, b"other-token")
-    lock = _fresh_lock(
+    lock = Lock(
         client,
         name,
+        ttl=LOCK_TTL,
         timeout=LOCK_WAIT_TIMEOUT,
         signal=lambda: False,
     )
@@ -667,21 +765,63 @@ def test_lock_acquire_deadline_exceeded_returns_false(
     Given: a held lock, a small blocking timeout, and a scripted
         monotonic clock that jumps CLOCK_JUMP seconds on every call.
     When: acquire runs.
-    Then: False is returned — both the inner message wait and the outer
-        deadline exhaust on the accelerated clock.
+    Then: False is returned — the outer deadline exhausts on the
+        accelerated clock before any message wait completes.
     """
     # --- Arrange ---
     client = fake_redis()
     name = fake.word()
     client.set(name, b"other-token")
     monkeypatch.setattr("zx.lib.redis.monotonic", _AcceleratedClock())
-    lock = _fresh_lock(client, name, timeout=LOCK_TIMEOUT)
+    lock = Lock(client, name, ttl=LOCK_TTL, timeout=LOCK_TIMEOUT)
 
     # --- Act ---
     acquired = lock.acquire()
 
     # --- Assert ---
     assert acquired is False
+
+
+@pytest.mark.timeout(LOCK_TEST_TIMEOUT)
+def test_lock_acquire_no_timeout_waits_until_signal_flips(
+    fake: Faker,
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Given: a held lock and a waiter with timeout=None (wait forever)
+        and a signal that flips False after a few condition checks.
+    When: acquire runs on the accelerated clock.
+    Then: False is returned via the signal gate — the infinite
+        deadline never binds, and each message wait is capped at
+        the fast poll interval.
+    """
+    # --- Arrange ---
+    client = fake_redis()
+    name = fake.word()
+    client.set(name, b"other-token")
+    monkeypatch.setattr("zx.lib.redis.monotonic", _AcceleratedClock())
+    state = {"calls": ZERO}
+
+    def _flip() -> bool:
+        state["calls"] += 1
+        return state["calls"] <= SIGNAL_TRUE_CALLS
+
+    lock = Lock(
+        client,
+        name,
+        ttl=LOCK_TTL,
+        timeout=None,
+        poll=LOCK_POLL_FAST,
+        signal=_flip,
+    )
+
+    # --- Act ---
+    acquired = lock.acquire()
+
+    # --- Assert ---
+    assert acquired is False
+    assert state["calls"] > SIGNAL_TRUE_CALLS
 
 
 @pytest.mark.timeout(LOCK_TEST_TIMEOUT)
@@ -703,9 +843,15 @@ def test_lock_acquire_unlock_message_returns_true(
     holder_client = fake_redis(server=server)
     waiter_client = fake_redis(server=server)
     name = fake.word()
-    holder = _fresh_lock(holder_client, name, timeout=LOCK_WAIT_TIMEOUT)
+    holder = Lock(holder_client, name, ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
     assert holder.acquire() is True
-    waiter = _fresh_lock(waiter_client, name, timeout=LOCK_WAIT_TIMEOUT)
+    waiter = Lock(
+        waiter_client,
+        name,
+        ttl=LOCK_TTL,
+        timeout=LOCK_WAIT_TIMEOUT,
+        poll=LOCK_POLL_FAST,
+    )
 
     def _release() -> None:
         time.sleep(RELEASE_DELAY)
@@ -724,7 +870,7 @@ def test_lock_acquire_unlock_message_returns_true(
     assert releaser.is_alive() is False
 
 
-# --- lock: _wait_for_message unit seam ---
+# --- lock: _wait_for_message unit seam (single slice) ---
 
 
 def test_lock_wait_for_message_accepts_str_data_against_bytes_unlock(
@@ -734,56 +880,60 @@ def test_lock_wait_for_message_accepts_str_data_against_bytes_unlock(
     """
     Given: a lock whose inherited unlock_message is bytes.
     When: a str unlock message arrives (decode_responses=True payloads).
-    Then: the wait resolves True — regression pin for bugs/zx.lib/027.
+    Then: the slice resolves True — regression pin for bugs/zx.lib/027.
     """
     # --- Arrange ---
-    lock = _fresh_lock(fake_redis(), fake.word(), timeout=LOCK_WAIT_TIMEOUT)
+    lock = Lock(fake_redis(), fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
     pubsub = _StubPubSub([{"type": "message", "data": UNLOCK_MESSAGE_TEXT}])
 
     # --- Act / Assert ---
-    assert lock._wait_for_message(pubsub, timeout=1) is True  # noqa: SLF001
+    assert lock._wait_for_message(pubsub, timeout=SEAM_TIMEOUT) is True  # noqa: SLF001
 
 
-def test_lock_wait_for_message_skips_foreign_messages(
+def test_lock_wait_for_message_foreign_payload_returns_false(
     fake: Faker,
     fake_redis: Callable[..., fakeredis.FakeRedis],
 ) -> None:
     """
-    Given: a scripted pubsub yielding a wrong payload, None, then unlock.
+    Given: a scripted pubsub whose next frame carries a foreign payload.
     When: the wait runs.
-    Then: foreign messages are skipped and the unlock resolves True.
+    Then: False is returned after exactly one frame — the single-slice
+        seam never loops over the stream.
     """
     # --- Arrange ---
-    lock = _fresh_lock(fake_redis(), fake.word(), timeout=LOCK_WAIT_TIMEOUT)
+    lock = Lock(fake_redis(), fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
     pubsub = _StubPubSub(
         [
             {"type": "message", "data": fake.word()},
-            None,
             {"type": "message", "data": UNLOCK_MESSAGE_TEXT},
         ],
     )
 
-    # --- Act / Assert ---
-    assert lock._wait_for_message(pubsub, timeout=1) is True  # noqa: SLF001
+    # --- Act ---
+    result = lock._wait_for_message(pubsub, timeout=SEAM_TIMEOUT)  # noqa: SLF001
+
+    # --- Assert ---
+    assert result is False
+    assert len(pubsub.calls) == SINGLE_CALL
+    assert pubsub._messages, "single slice must leave later frames untouched"  # noqa: SLF001
 
 
-def test_lock_wait_for_message_past_deadline_returns_false(
+def test_lock_wait_for_message_silent_pubsub_returns_false(
     fake: Faker,
     fake_redis: Callable[..., fakeredis.FakeRedis],
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Given: a silent pubsub and an accelerated monotonic clock.
-    When: the wait runs past its deadline.
-    Then: False is returned without real waiting.
+    Given: a scripted pubsub with no frames.
+    When: the wait runs.
+    Then: False is returned — the caller owns the deadline, the slice
+        just reports the empty read.
     """
     # --- Arrange ---
-    lock = _fresh_lock(fake_redis(), fake.word(), timeout=LOCK_WAIT_TIMEOUT)
+    lock = Lock(fake_redis(), fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
     pubsub = _StubPubSub([])
-    monkeypatch.setattr("zx.lib.redis.monotonic", _AcceleratedClock())
 
     # --- Act / Assert ---
-    assert lock._wait_for_message(pubsub, timeout=1) is False  # noqa: SLF001
+    assert lock._wait_for_message(pubsub, timeout=SEAM_TIMEOUT) is False  # noqa: SLF001
 
 
 def test_lock_wait_for_message_condition_false_returns_false(
@@ -796,16 +946,50 @@ def test_lock_wait_for_message_condition_false_returns_false(
     Then: False is returned immediately, pubsub never consulted.
     """
     # --- Arrange ---
-    lock = _fresh_lock(
+    lock = Lock(
         fake_redis(),
         fake.word(),
+        ttl=LOCK_TTL,
         timeout=LOCK_WAIT_TIMEOUT,
         signal=lambda: False,
     )
     pubsub = _StubPubSub([{"type": "message", "data": UNLOCK_MESSAGE_TEXT}])
 
-    # --- Act / Assert ---
-    assert lock._wait_for_message(pubsub, timeout=1) is False  # noqa: SLF001
+    # --- Act ---
+    result = lock._wait_for_message(pubsub, timeout=SEAM_TIMEOUT)  # noqa: SLF001
+
+    # --- Assert ---
+    assert result is False
+    assert pubsub.calls == []
+
+
+def test_lock_wait_for_message_caps_get_message_timeout_at_poll(
+    fake: Faker,
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+) -> None:
+    """
+    Given: a lock with a fast poll interval and a scripted pubsub
+        recording get_message kwargs.
+    When: the wait runs with a generous slice timeout.
+    Then: get_message is capped at the poll interval — the signal is
+        re-checked at least every poll.
+    """
+    # --- Arrange ---
+    lock = Lock(
+        fake_redis(),
+        fake.word(),
+        ttl=LOCK_TTL,
+        timeout=LOCK_WAIT_TIMEOUT,
+        poll=LOCK_POLL_FAST,
+    )
+    pubsub = _StubPubSub([])
+
+    # --- Act ---
+    result = lock._wait_for_message(pubsub, timeout=SEAM_TIMEOUT)  # noqa: SLF001
+
+    # --- Assert ---
+    assert result is False
+    assert [call["timeout"] for call in pubsub.calls] == [LOCK_POLL_FAST]
 
 
 # --- helpers ---
@@ -816,9 +1000,11 @@ class _StubPubSub:
 
     def __init__(self, messages: list[dict | None]) -> None:
         self._messages = list(messages)
+        self.calls: list[dict[str, Any]] = []
 
-    def get_message(self, **_kw: object) -> dict | None:
-        """Pop the next scripted message; None once the script is empty."""
+    def get_message(self, **kw: Any) -> dict | None:
+        """Record the call; pop the next scripted message (None if empty)."""
+        self.calls.append(kw)
         return self._messages.pop(0) if self._messages else None
 
 
@@ -835,33 +1021,6 @@ class _AcceleratedClock:
     def __call__(self) -> float:
         self._now += CLOCK_JUMP
         return self._now
-
-
-def _fresh_lock(
-    client: fakeredis.FakeRedis,
-    name: str,
-    /,
-    *,
-    timeout: float = 0,
-    signal: Callable[[], bool] | None = None,
-) -> Lock:
-    """Build a Lock instance while skipping the broken `__init__`.
-
-    `Lock.__init__` assigns `self.name`, but `redis_lock.BaseLock.name`
-    is a read-only property, so construction raises AttributeError
-    (genuine src bug, pinned by a dedicated test above). Initialize the
-    base attributes `acquire` reads, mirroring `__init__` semantics.
-    """
-    lock = Lock.__new__(Lock)
-    lock._client = client  # noqa: SLF001
-    lock._name = name  # noqa: SLF001
-    lock._uuid = uuid4().hex.encode()  # noqa: SLF001
-    lock._signal = signal  # noqa: SLF001
-    lock._blocking_timeout = float(  # noqa: SLF001
-        timeout or TEN_YEAR_FALLBACK,
-    )
-    lock._ex = None  # noqa: SLF001
-    return lock
 
 
 # --- appended contract tests (pool construction & worker edges) ---
@@ -1058,7 +1217,7 @@ def test_flag_changed_counter_drop_to_zero_resets_snapshot(
     Given: an unblocked flag whose counter was raised then deleted
         (drop to zero), a recorded sleep, and a scripted monotonic
         whose second reading is past the deadline.
-    When: changed runs with infinite=False.
+    When: changed runs with a timeout.
     Then: the drop-to-zero arm resets the snapshot, the deadline arm
         returns False without sleeping, and updated reads False after.
     """
@@ -1075,7 +1234,7 @@ def test_flag_changed_counter_drop_to_zero_resets_snapshot(
     monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
 
     # --- Act ---
-    changed = flag.changed(FLAG_TIMEOUT, infinite=False)
+    changed = flag.changed(FLAG_TIMEOUT)
 
     # --- Assert ---
     assert changed is False
@@ -1146,65 +1305,128 @@ def test_lock_wait_for_message_bytes_data_against_str_unlock(
     Then: the bytes data decodes against the str expectation — True.
     """
     # --- Arrange ---
-    lock = _fresh_lock(fake_redis(), fake.word(), timeout=LOCK_WAIT_TIMEOUT)
+    lock = Lock(fake_redis(), fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
     lock.unlock_message = UNLOCK_MESSAGE_TEXT
-    pubsub = _StubPubSub([{"type": "message", "data": b"ok"}])
+    pubsub = _StubPubSub(
+        [{"type": "message", "data": UNLOCK_MESSAGE_TEXT.encode()}],
+    )
 
     # --- Act / Assert ---
-    assert lock._wait_for_message(pubsub, timeout=1) is True  # noqa: SLF001
+    assert lock._wait_for_message(pubsub, timeout=SEAM_TIMEOUT) is True  # noqa: SLF001
 
 
-def test_lock_wait_for_message_ignores_non_message_types(
+def test_lock_wait_for_message_non_message_type_returns_false(
     fake: Faker,
     fake_redis: Callable[..., fakeredis.FakeRedis],
 ) -> None:
     """
-    Given: a scripted pubsub yielding "subscribe" and "pmessage" frames
-        ahead of the real unlock message.
+    Given: a scripted pubsub whose next frame is not a "message".
     When: the wait runs.
-    Then: non-"message" types are ignored and the unlock resolves True.
+    Then: False is returned after that single frame — subscribe and
+        pmessage frames do not resolve the wait.
     """
     # --- Arrange ---
-    lock = _fresh_lock(fake_redis(), fake.word(), timeout=LOCK_WAIT_TIMEOUT)
+    lock = Lock(fake_redis(), fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
     pubsub = _StubPubSub(
         [
-            {"type": "subscribe", "data": 1},
-            {"type": "pmessage", "data": b"ok"},
+            {"type": "pmessage", "data": UNLOCK_MESSAGE_TEXT.encode()},
             {"type": "message", "data": UNLOCK_MESSAGE_TEXT},
         ],
     )
 
-    # --- Act / Assert ---
-    assert lock._wait_for_message(pubsub, timeout=1) is True  # noqa: SLF001
+    # --- Act ---
+    result = lock._wait_for_message(pubsub, timeout=SEAM_TIMEOUT)  # noqa: SLF001
+
+    # --- Assert ---
+    assert result is False
+    assert len(pubsub.calls) == SINGLE_CALL
 
 
-def test_lock_wait_for_message_foreign_stream_respects_deadline(
+# --- lock context manager ---
+
+
+def test_lock_context_clean_exit_calls_release(
     fake: Faker,
     fake_redis: Callable[..., fakeredis.FakeRedis],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Given: a scripted pubsub with more foreign frames than the deadline
-        allows and an accelerated monotonic clock.
-    When: the wait runs against the stream.
-    Then: False is returned and unconsumed frames remain — the deadline
-        is enforced even while messages keep arriving.
+    Given: an acquirable lock whose release is stubbed (fakeredis has
+        no evalsha for the real Lua release).
+    When: the context exits without an exception.
+    Then: release ran exactly once.
     """
     # --- Arrange ---
-    lock = _fresh_lock(fake_redis(), fake.word(), timeout=LOCK_WAIT_TIMEOUT)
-    monkeypatch.setattr("zx.lib.redis.monotonic", _AcceleratedClock())
-    pubsub = _StubPubSub(
-        [
-            {"type": "message", "data": fake.word()},
-            {"type": "message", "data": fake.word()},
-            {"type": "message", "data": fake.word()},
-            {"type": "message", "data": fake.word()},
-        ],
-    )
+    lock = Lock(fake_redis(), fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
+    releases: list[bool] = []
+    monkeypatch.setattr(lock, "release", lambda: releases.append(True))
 
     # --- Act ---
-    result = lock._wait_for_message(pubsub, timeout=1)  # noqa: SLF001
+    with lock:
+        pass
 
     # --- Assert ---
-    assert result is False
-    assert pubsub._messages, "wait must stop at the deadline, not drain the stream"
+    assert len(releases) == SINGLE_CALL
+
+
+def test_lock_context_body_error_still_releases(
+    fake: Faker,
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Given: an acquirable lock with a stubbed release.
+    When: the context body raises.
+    Then: the original exception propagates and release still ran.
+    """
+    # --- Arrange ---
+    lock = Lock(fake_redis(), fake.word(), ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
+    releases: list[bool] = []
+    monkeypatch.setattr(lock, "release", lambda: releases.append(True))
+
+    # --- Act / Assert ---
+    with pytest.raises(ValueError, match="boom"), lock:
+        raise ValueError("boom")
+    assert len(releases) == SINGLE_CALL
+
+
+def test_lock_context_body_error_lock_lost_warns_and_propagates(
+    fake: Faker,
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    Given: an acquirable lock whose release fails with
+        LockNotOwnedError — the key expired or was stolen mid-body.
+    When: the context body raises.
+    Then: the original exception propagates and the lost lock is
+        logged as a warning naming the lock.
+    """
+    # --- Arrange ---
+    client = fake_redis()
+    name = fake.word()
+    lock = Lock(client, name, ttl=LOCK_TTL, timeout=LOCK_WAIT_TIMEOUT)
+
+    def _lost() -> bool:
+        raise LockNotOwnedError
+
+    monkeypatch.setattr(lock, "release", _lost)
+
+    # --- Act / Assert ---
+    with (
+        caplog.at_level("WARNING", logger="zx.lib.redis"),
+        pytest.raises(ValueError, match="boom"),
+        lock,
+    ):
+        raise ValueError("boom")
+
+    warnings = [
+        record
+        for record in caplog.records
+        if record.name == "zx.lib.redis" and record.levelname == "WARNING"
+    ]
+    assert [record.getMessage() for record in warnings] == [
+        "lock lost before release",
+    ]
+    assert [record.lock for record in warnings] == [name]
