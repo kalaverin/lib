@@ -171,6 +171,7 @@ class Flag(Pool):
         timeout: float | None = None,
         /,
         poll: float | None = None,
+        default: bool = True,
     ) -> bool:
         counter = 0
         start = monotonic()
@@ -201,7 +202,7 @@ class Flag(Pool):
 
             remaining = deadline - monotonic()
             if remaining <= 0:
-                return False
+                return default
 
             sleep(min(remaining, wait))
             counter += 1
@@ -212,6 +213,7 @@ class Flag(Pool):
         timeout: float | None = None,
         /,
         poll: float | None = None,
+        default: bool = True,
     ) -> bool:
 
         counter = 0
@@ -234,7 +236,7 @@ class Flag(Pool):
 
             remaining = deadline - monotonic()
             if remaining <= 0:
-                return False
+                return default
 
             sleep(min(remaining, wait))
             counter += 1
