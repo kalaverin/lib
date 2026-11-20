@@ -542,7 +542,7 @@ def test_flag_changed_past_deadline_returns_false(
     """
     Given: a never-set flag and a scripted monotonic sequence whose
         second reading is past the deadline, with a recorded sleep.
-    When: changed runs with a timeout.
+    When: changed runs with a timeout and default=False.
     Then: False is returned past the deadline, without any sleeping.
     """
     # --- Arrange ---
@@ -559,7 +559,7 @@ def test_flag_changed_past_deadline_returns_false(
     monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
 
     # --- Act ---
-    changed = flag.changed(FLAG_TIMEOUT)
+    changed = flag.changed(FLAG_TIMEOUT, default=False)
 
     # --- Assert ---
     assert changed is False
@@ -575,7 +575,7 @@ def test_flag_changed_constructor_timeout_applies_without_argument(
     """
     Given: a flag constructed with timeout=FLAG_TIMEOUT and a scripted
         monotonic whose second reading is past the deadline.
-    When: changed runs without a timeout argument.
+    When: changed runs without a timeout argument and with default=False.
     Then: the constructor timeout binds — False past the deadline.
     """
     # --- Arrange ---
@@ -593,7 +593,7 @@ def test_flag_changed_constructor_timeout_applies_without_argument(
     monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
 
     # --- Act ---
-    changed = flag.changed()
+    changed = flag.changed(default=False)
 
     # --- Assert ---
     assert changed is False
@@ -610,7 +610,7 @@ def test_flag_changed_poll_argument_caps_every_sleep(
     Given: an unset flag, a per-call poll argument wider than the
         instance poll, and a scripted monotonic walking past the
         deadline in fixed steps.
-    When: changed runs with the poll argument.
+    When: changed runs with the poll argument and default=False.
     Then: every sleep is the per-call poll, capped by the remaining
         budget — the argument applies to all iterations, not just
         the first.
@@ -630,14 +630,47 @@ def test_flag_changed_poll_argument_caps_every_sleep(
     monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
 
     # --- Act ---
-    changed = flag.changed(FLAG_TIMEOUT, poll=CHANGED_POLL)
+    changed = flag.changed(FLAG_TIMEOUT, poll=CHANGED_POLL, default=False)
 
     # --- Assert ---
     assert changed is False
     assert sleeps == pytest.approx([CHANGED_POLL, FLAG_TIMEOUT - SECOND_TICK])
 
 
-# --- flag non_zero ---
+@pytest.mark.timeout(FLAG_TEST_TIMEOUT)
+def test_flag_changed_past_deadline_returns_default_true(
+    fake: Faker,
+    fake_redis: Callable[..., fakeredis.FakeRedis],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Given: a never-set flag and a scripted monotonic sequence whose
+        second reading is past the deadline, with a recorded sleep.
+    When: changed runs with a timeout and no default argument.
+    Then: the restored default (True) is returned past the deadline,
+        without any sleeping.
+    """
+    # --- Arrange ---
+    flag = Flag(
+        fake.word(),
+        client=fake_redis(),
+        blocked=False,
+        poll=FLAG_POLL,
+    )
+    sleeps: list[float] = []
+    monkeypatch.setattr("zx.lib.redis.sleep", sleeps.append)
+    past_deadline = MONOTONIC_START + FLAG_TIMEOUT + DEADLINE_OVERDRAW
+    ticks = iter((MONOTONIC_START, past_deadline))
+    monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
+
+    # --- Act ---
+    changed = flag.changed(FLAG_TIMEOUT)
+
+    # --- Assert ---
+    assert changed is True
+    assert sleeps == []
+
+
 # --- flag non_zero ---
 
 
@@ -1217,7 +1250,7 @@ def test_flag_changed_counter_drop_to_zero_resets_snapshot(
     Given: an unblocked flag whose counter was raised then deleted
         (drop to zero), a recorded sleep, and a scripted monotonic
         whose second reading is past the deadline.
-    When: changed runs with a timeout.
+    When: changed runs with a timeout and default=False.
     Then: the drop-to-zero arm resets the snapshot, the deadline arm
         returns False without sleeping, and updated reads False after.
     """
@@ -1234,7 +1267,7 @@ def test_flag_changed_counter_drop_to_zero_resets_snapshot(
     monkeypatch.setattr("zx.lib.redis.monotonic", lambda: next(ticks))
 
     # --- Act ---
-    changed = flag.changed(FLAG_TIMEOUT)
+    changed = flag.changed(FLAG_TIMEOUT, default=False)
 
     # --- Assert ---
     assert changed is False

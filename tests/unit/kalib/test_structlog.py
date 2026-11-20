@@ -392,6 +392,30 @@ def test_configure_dict_config_is_swapped_for_noop(
     assert logging.config.dictConfig is nothing_to_do
 
 
+def test_configure_second_call_is_complete_noop(
+    structlog_snapshot: StructlogSnapshot,
+) -> None:
+    """
+    Given: a configure call that already ran in JSON mode.
+    When: configure is called again with different arguments.
+    Then: the second call is a complete no-op — events keep flowing
+        through the first descriptor, the second stays untouched.
+    """
+    # --- Arrange ---
+    first = io.StringIO()
+    second = io.StringIO()
+    configure(descriptor=first)
+
+    # --- Act ---
+    configure(is_textual=True, descriptor=second)
+    get_logger().info("after second call")
+
+    # --- Assert ---
+    line = first.getvalue().splitlines()[-1]
+    assert json.loads(line)["event"] == "after second call"
+    assert second.getvalue() == ""
+
+
 def test_configure_attaches_spam_filter_to_root_handler(
     structlog_snapshot: StructlogSnapshot,
 ) -> None:

@@ -164,6 +164,12 @@ def configure(
     ignore_modules: Collection[str] | None = None,
     static_fields: Mapping[str, Any] | None = None,
 ) -> None:
+    # one-shot by design: a repeated call is a complete no-op. The guard
+    # must cover the whole body — structlog.configure_once alone would
+    # still re-run the stdlib handler swap below on every call.
+    if structlog.is_configured():
+        return
+
     # convert integer level to string name
     if isinstance(level, int):
         level = getLevelName(level)

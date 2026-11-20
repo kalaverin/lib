@@ -55,7 +55,6 @@ def structlog_snapshot() -> Iterator[None]:
     reconfigures structlog itself — all of that is rolled back here.
     """
     original_dict_config = logging.config.dictConfig
-    original_structlog_config = structlog.get_config()
 
     observed = [
         logging.root,
@@ -69,7 +68,9 @@ def structlog_snapshot() -> Iterator[None]:
     yield
 
     logging.config.dictConfig = original_dict_config
-    structlog.configure(**original_structlog_config)
+    # reset_defaults also clears the is_configured flag, so the next
+    # test's zx.lib.structlog.configure() is a first call again
+    structlog.reset_defaults()
     for entry, handlers, level, propagate in saved:
         entry.handlers[:] = handlers
         entry.setLevel(level)
