@@ -111,7 +111,7 @@ def show_environment(  # noqa: UP047
                 ]
 
             logger.info(
-                "Used libraries",
+                "package_libraries",
                 extra={
                     "app": config.name,
                     "version": config.version,
@@ -121,7 +121,7 @@ def show_environment(  # noqa: UP047
 
     variables: dict[str, Any] = config.model_dump()
     logger.info(
-        "Environment variables",
+        "environment_variables",
         extra={
             "app": config.name,
             "variables": variables,

@@ -266,7 +266,7 @@ def configure(
 
     logger = structlog.get_logger()
     logger.info(
-        "structlog configured",
+        "logging_configured",
         level=level,
         is_textual=is_textual,
         ignore_files=list(files),
