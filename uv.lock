@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <3.16"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -1431,8 +1431,9 @@ wheels = [
 
 [[package]]
 name = "kalib"
-version = "1.0.5"
+version = "1.0.6"
 source = { editable = "." }
+default-groups = []
 dependencies = [
     { name = "base58" },
     { name = "charded" },
