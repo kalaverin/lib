@@ -41,6 +41,7 @@ from structlog.stdlib import (
 from structlog.types import Processor
 from structlog.typing import EventDict
 
+from zx.core import Is
 from zx.lib.serial import dumps
 
 __all__ = (
@@ -217,7 +218,7 @@ def configure(
             return dumps(value, on_error="name").decode()
 
         renderer = JSONRenderer(serializer=safe_serialize)
-    else:
+    elif Is.tty:
         renderer = ConsoleRenderer(
             colors=True,
             exception_formatter=RichTracebackFormatter(
@@ -226,6 +227,8 @@ def configure(
                 theme=getenv("PYGMENTS_THEME", "vim"),
             ),
         )
+    else:
+        renderer = ConsoleRenderer()
 
     # formatter for handler, it will call all processors before render
 
