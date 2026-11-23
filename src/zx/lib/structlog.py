@@ -234,8 +234,8 @@ def configure(
     # formatter for handler, it will call all processors before render
 
     formatter: ProcessorFormatter = ProcessorFormatter(
-        keep_exc_info=is_textual,
-        keep_stack_info=is_textual,
+        keep_exc_info=is_textual and wrap_tracebacks,
+        keep_stack_info=is_textual and wrap_tracebacks,
         foreign_pre_chain=order,
         processors=[ProcessorFormatter.remove_processors_meta, renderer],
     )
