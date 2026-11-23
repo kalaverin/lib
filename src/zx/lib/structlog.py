@@ -159,6 +159,7 @@ class SuppressSpamFilter(Filter):
 def configure(
     level: str | int = "info",
     is_textual: bool = False,
+    wrap_tracebacks: bool = False,
     descriptor: TextIO = sys.stdout,
     processors: Iterable[Processor] = DEFAULT_PROCESSORS,
     ignore_files: Collection[str] | None = None,
@@ -218,9 +219,9 @@ def configure(
             return dumps(value, on_error="name").decode()
 
         renderer = JSONRenderer(serializer=safe_serialize)
-    elif Is.tty:
+    elif wrap_tracebacks:
         renderer = ConsoleRenderer(
-            colors=True,
+            colors=Is.tty,
             exception_formatter=RichTracebackFormatter(
                 extra_lines=4,
                 max_frames=20,
